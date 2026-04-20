@@ -2,71 +2,70 @@
 
 {% block content %}
 <div class="mb-4">
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{{ url_for('index') }}" class="text-primary text-decoration-none">Dashboard</a></li>
-            <li class="breadcrumb-item active text-white" aria-current="page">Inventário: {{ sala.nome }}</li>
-        </ol>
-    </nav>
-    <h2 class="fw-bold">Processo de Contagem</h2>
+    <div class="badge bg-danger rounded-0 mb-2">PROCESSO DE INVENTÁRIO ATIVO</div>
+    <h2 class="fw-bold text-uppercase">Conferência de Ambiente: {{ sala.nome }}</h2>
+    <p class="text-muted small">Escola: {{ current_user.escola.nome }}</p>
 </div>
 
 <div class="row g-4">
-    <!-- QR/Barcode Input -->
+    <!-- Registro -->
     <div class="col-md-5">
-        <div class="card p-4 h-100 shadow-lg border-primary border-opacity-25">
-            <h5 class="fw-bold mb-3">Registrar Item</h5>
-            <p class="text-muted small">Escaneie o código ou digite o número do patrimônio abaixo.</p>
+        <div class="card p-4 h-100 border-top-0 border-start-0 border-end-0 border-bottom-3 border-danger shadow-sm">
+            <h5 class="fw-bold mb-3 text-uppercase small">Registrar Item</h5>
+            <p class="text-muted small mb-4">Insira o número de inventário colado no bem para validar sua presença.</p>
             
-            <form id="scanForm" class="mt-4">
+            <form id="scanForm">
                 <input type="hidden" name="sala_id" value="{{ sala.id }}">
                 <input type="hidden" name="inventario_id" value="{{ inventario.id }}">
                 <div class="mb-3">
-                    <input type="text" name="numero" id="patInput" class="form-control form-control-lg text-center" placeholder="99.999.999" autofocus required>
+                    <input type="text" name="numero" id="patInput" class="form-control form-control-lg text-center font-monospace" placeholder="999999" autofocus required>
                 </div>
-                <button type="submit" class="btn btn-primary w-100 py-3 fw-bold">VERIFICAR ITEM</button>
+                <button type="submit" class="btn btn-primary w-100 py-3 fw-bold">VALIDAR PRESENÇA</button>
             </form>
 
-            <div id="scanResult" class="mt-4 animate-up d-none">
-                <!-- Result will be injected here -->
+            <div id="scanResult" class="mt-4 fade-in d-none">
+                <!-- Injected result -->
             </div>
             
-            <div class="mt-auto pt-4 text-center">
-                <a href="{{ url_for('finalizar_inventario', inv_id=inventario.id) }}" class="btn btn-outline-success w-100" onclick="return confirm('Deseja finalizar este inventário?')">FINALIZAR INVENTÁRIO</a>
+            <div class="mt-auto pt-4 border-top border-light">
+                <a href="{{ url_for('finalizar_inventario', inv_id=inventario.id) }}" class="btn btn-outline-success w-100 fw-bold" onclick="return confirm('Deseja finalizar o inventário e enviar para validação?')">FINALIZAR CONTAGEM</a>
             </div>
         </div>
     </div>
 
-    <!-- Expected Items List -->
+    <!-- Lista -->
     <div class="col-md-7">
         <div class="card p-4 h-100">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h5 class="fw-bold mb-0">Itens Esperados na Sala</h5>
-                <span class="badge bg-secondary">{{ itens_esperados|length }} itens</span>
+                <h5 class="fw-bold mb-0 text-uppercase small">Itens Esperados no Ambiente</h5>
+                <span class="badge bg-secondary rounded-0">{{ itens_esperados|length }} bens</span>
             </div>
             
             <div class="table-responsive">
-                <table class="table table-hover align-middle">
+                <table class="table table-hover align-middle table-sm border-0">
                     <thead class="text-muted">
                         <tr>
-                            <th>Patrimônio</th>
-                            <th>Descrição</th>
+                            <th>Bem</th>
                             <th>Status</th>
                         </tr>
                     </thead>
                     <tbody id="itemsTable">
                         {% for item in itens_esperados %}
                         <tr id="row-{{ item.id }}" class="{{ 'opacity-50' if item.id in conferidos_ids else '' }}">
-                            <td><span class="font-monospace fw-bold">{{ item.numero_patrimonio }}</span></td>
                             <td>
-                                <div>{{ item.descricao }}</div>
-                                <small class="text-muted">{{ item.marca }} {{ item.modelo }}</small>
+                                <div class="d-flex align-items-center">
+                                    <img src="{{ item.imagem_url or 'https://via.placeholder.com/60?text=Sem+Foto' }}" class="asset-img me-2" alt="">
+                                    <div>
+                                        <div class="font-monospace fw-bold text-danger">{{ item.numero_patrimonio }}</div>
+                                        <div class="small">{{ item.descricao }}</div>
+                                    </div>
+                                </div>
                             </td>
                             <td>
                                 {% if item.id in conferidos_ids %}
-                                <span class="badge bg-success">Conferido</span>
+                                <span class="badge bg-success text-uppercase" style="font-size: 0.6rem;">Check OK</span>
                                 {% else %}
-                                <span class="badge bg-dark border border-secondary border-opacity-25">Pendente</span>
+                                <span class="badge bg-light text-dark text-uppercase border" style="font-size: 0.6rem;">Pendente</span>
                                 {% endif %}
                             </td>
                         </tr>
@@ -77,8 +76,6 @@
         </div>
     </div>
 </div>
-
-<!-- Relocation Modal Interaction (Simple Alert/Prompt with logic) -->
 
 {% endblock %}
 
@@ -103,27 +100,32 @@ document.getElementById('scanForm').addEventListener('submit', async (e) => {
         
         if (data.status === 'ok') {
             resultDiv.innerHTML = `
-                <div class="alert alert-success d-flex align-items-center">
-                    <div>
-                        <div class="fw-bold">Item Confirmado!</div>
-                        <small>${data.message}</small>
+                <div class="card p-3 border-success bg-success bg-opacity-10">
+                    <div class="d-flex align-items-center">
+                        <img src="${data.imagem || 'https://via.placeholder.com/60'}" class="asset-img me-3">
+                        <div class="flex-grow-1">
+                            <div class="fw-bold text-success text-uppercase small">Item Validado</div>
+                            <div class="small">${data.message}</div>
+                        </div>
                     </div>
+                    <button class="btn btn-warning btn-sm mt-3 fw-bold w-100" onclick="marcarQuebrado(${data.pat_id || 0})">ITEM ESTÁ QUEBRADO?</button>
                 </div>`;
             patInput.value = '';
-            // Refresh logic could be better, but let's keep it simple
-            setTimeout(() => location.reload(), 1500);
+            setTimeout(() => location.reload(), 2000);
         } else if (data.status === 'not_found') {
             resultDiv.innerHTML = `
-                <div class="alert alert-danger">
-                    <div class="fw-bold">Não Encontrado</div>
-                    <small>${data.message}</small>
-                </div>`;
+                <div class="alert alert-danger rounded-0 small fw-bold">ITEM NÃO ENCONTRADO NO SISTEMA</div>`;
         } else if (data.status === 'wrong_room') {
             resultDiv.innerHTML = `
-                <div class="alert alert-warning">
-                    <div class="fw-bold">Item em Sala Errada</div>
-                    <p class="small mb-2">${data.message}</p>
-                    <button class="btn btn-sm btn-warning w-100 fw-bold" onclick="solicitarRelocacao(${data.pat_id}, ${formData.get('sala_id')}, ${formData.get('inventario_id')})">SOLICITAR RELOCAÇÃO</button>
+                <div class="card p-3 border-warning bg-warning bg-opacity-10">
+                    <div class="d-flex align-items-center mb-3">
+                        <img src="${data.imagem || 'https://via.placeholder.com/60'}" class="asset-img me-3">
+                        <div class="flex-grow-1">
+                            <div class="fw-bold text-warning text-uppercase small">Localização Divergente</div>
+                            <div class="small">Este item pertence à: <strong>${data.sala_atual}</strong></div>
+                        </div>
+                    </div>
+                    <button class="btn btn-danger btn-sm w-100 fw-bold rounded-0" onclick="solicitarRelocacao(${data.pat_id}, ${formData.get('sala_id')}, ${formData.get('inventario_id')})">SOLICITAR MUDANÇA PARA ESTE LOCAL</button>
                 </div>`;
         }
     } catch (err) {
@@ -131,22 +133,35 @@ document.getElementById('scanForm').addEventListener('submit', async (e) => {
     }
 });
 
-async function solicitarRelocacao(patId, salaDestino, invId) {
-    if (!confirm("Confirmar solicitação de relocação para esta sala?")) return;
+async function marcarQuebrado(patId) {
+    if (!patId) {
+        // Find patId from recent scan logic check or wait for user to re-scan
+        alert("Escaneie o item primeiro para marcá-lo como quebrado.");
+        return;
+    }
+    if (!confirm("Marcar este item como DANIFICADO para avaliação de descarte?")) return;
     
+    await fetch("{{ url_for('marcar_quebrado') }}", {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ pat_id: patId })
+    });
+    alert("Dano reportado à administração.");
+    location.reload();
+}
+
+async function solicitarRelocacao(patId, salaDestino, invId) {
     const res = await fetch("{{ url_for('solicitar_relocacao') }}", {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({
             pat_id: patId,
-            sala_origem_id: 0, // Backend will find original room
             sala_destino_id: salaDestino,
             inv_id: invId
         })
     });
-    
     if (res.ok) {
-        alert("Solicitação enviada ao administrador!");
+        alert("Solicitação de mudança enviada!");
         location.reload();
     }
 }

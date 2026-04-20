@@ -3,73 +3,72 @@
 {% block content %}
 <div class="mb-4 d-flex justify-content-between align-items-center">
     <div>
-        <h2 class="fw-bold mb-0">Painel de Controle</h2>
-        <p class="text-muted">Visão geral do patrimônio e ambientes</p>
+        <h2 class="fw-bold mb-0 text-uppercase" style="letter-spacing: -0.02em;">Gestão de Ativos</h2>
+        <p class="text-muted small">Gerenciamento centralizado da unidade: <strong>{{ current_user.escola.nome }}</strong></p>
     </div>
     <div class="d-flex gap-2">
         <a href="{{ url_for('admin_patrimonios') }}" class="btn btn-primary btn-sm">Novo Patrimônio</a>
-        <a href="{{ url_for('admin_salas') }}" class="btn btn-outline-light btn-sm">Gerenciar Salas</a>
     </div>
 </div>
 
 <!-- Stats Cards -->
-<div class="row g-4 mb-5">
+<div class="row g-3 mb-5">
     <div class="col-md-3">
         <div class="card p-3 h-100">
-            <small class="text-muted fw-bold">SALAS</small>
-            <h2 class="mb-0 mt-2">{{ stats.salas }}</h2>
+            <small class="text-muted fw-bold text-uppercase" style="font-size: 0.6rem;">Ambientes</small>
+            <h3 class="mb-0 mt-1">{{ stats.salas }}</h3>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card p-3 h-100 border-top-0 border-start-0 border-end-0 border-bottom-3 border-danger shadow-sm">
+            <small class="text-muted fw-bold text-uppercase" style="font-size: 0.6rem;">Patrimônios Ativos</small>
+            <h3 class="mb-0 mt-1" style="color: var(--senai-red);">{{ stats.patrimonios }}</h3>
         </div>
     </div>
     <div class="col-md-3">
         <div class="card p-3 h-100">
-            <small class="text-muted fw-bold">ITENS TOTAIS</small>
-            <h2 class="mb-0 mt-2 text-primary">{{ stats.patrimonios }}</h2>
+            <small class="text-muted fw-bold text-uppercase" style="font-size: 0.6rem;">Itens Danificados</small>
+            <h3 class="mb-0 mt-1 {{ 'text-danger' if stats.quebrados > 0 else '' }}">{{ stats.quebrados }}</h3>
         </div>
     </div>
     <div class="col-md-3">
         <div class="card p-3 h-100">
-            <small class="text-muted fw-bold">RELOCAÇÕES PENDENTES</small>
-            <h2 class="mb-0 mt-2 {{ 'text-danger' if stats.relocacoes_pendentes > 0 else '' }}">{{ stats.relocacoes_pendentes }}</h2>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card p-3 h-100">
-            <small class="text-muted fw-bold">INVENTÁRIOS ATIVOS</small>
-            <h2 class="mb-0 mt-2">{{ stats.inventarios_ativos }}</h2>
+            <small class="text-muted fw-bold text-uppercase" style="font-size: 0.6rem;">Relocações Pendentes</small>
+            <h3 class="mb-0 mt-1">{{ stats.relocacoes_pendentes }}</h3>
         </div>
     </div>
 </div>
 
 <div class="row g-4">
-    <!-- Relocações Pendentes -->
-    <div class="col-md-8">
+    <!-- Itens para Descarte / Quebrados -->
+    <div class="col-md-6">
         <div class="card h-100 p-4">
-            <h5 class="fw-bold mb-4">Solicitações de Relocação</h5>
-            {% if relocacoes %}
+            <h5 class="fw-bold mb-4 text-uppercase" style="font-size: 0.9rem;">Itens para Avaliação de Descarte</h5>
+            {% if quebrados %}
             <div class="table-responsive">
-                <table class="table align-middle">
+                <table class="table align-middle table-sm border-0">
                     <thead>
                         <tr>
                             <th>Item</th>
-                            <th>De</th>
-                            <th>Para</th>
-                            <th>Responsável</th>
+                            <th>Local</th>
                             <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for r in relocacoes %}
+                        {% for q in quebrados %}
                         <tr>
                             <td>
-                                <div class="fw-bold">{{ r.patrimonio.numero_patrimonio }}</div>
-                                <small class="text-muted">{{ r.patrimonio.descricao }}</small>
+                                <div class="d-flex align-items-center">
+                                    <img src="{{ q.imagem_url or 'https://via.placeholder.com/60?text=Sem+Foto' }}" class="asset-img me-2" alt="">
+                                    <div>
+                                        <div class="fw-bold small">{{ q.numero_patrimonio }}</div>
+                                        <div class="text-muted" style="font-size: 0.7rem;">{{ q.descricao }}</div>
+                                    </div>
+                                </div>
                             </td>
-                            <td><span class="badge bg-secondary">{{ r.sala_origem.nome }}</span></td>
-                            <td><span class="badge bg-success">{{ r.sala_destino.nome }}</span></td>
-                            <td>{{ r.responsavel.nome }}</td>
+                            <td><span class="badge bg-light text-dark fw-bold" style="font-size: 0.6rem;">{{ q.sala.nome }}</span></td>
                             <td>
-                                <a href="{{ url_for('admin_processar_relocacao', id=r.id, acao='aprovar') }}" class="btn btn-success btn-sm me-1">Sim</a>
-                                <a href="{{ url_for('admin_processar_relocacao', id=r.id, acao='recusar') }}" class="btn btn-link text-danger btn-sm">Não</a>
+                                <a href="{{ url_for('admin_descartar', id=q.id) }}" class="btn btn-outline-danger btn-sm" style="font-size: 0.6rem;" onclick="return confirm('Confirmar descarte definitivo deste bem?')">DESCARTAR</a>
                             </td>
                         </tr>
                         {% endfor %}
@@ -78,27 +77,48 @@
             </div>
             {% else %}
             <div class="text-center py-5">
-                <p class="text-muted">Nenhuma solicitação pendente.</p>
+                <p class="text-muted small">Nenhum item marcado como quebrado no momento.</p>
             </div>
             {% endif %}
         </div>
     </div>
 
-    <!-- Salas e Chats -->
-    <div class="col-md-4">
+    <!-- Relocações -->
+    <div class="col-md-6">
         <div class="card h-100 p-4">
-            <h5 class="fw-bold mb-4">Canais de Comunicação</h5>
-            <div class="list-group list-group-flush bg-transparent">
-                {% for sala in salas %}
-                <a href="{{ url_for('chat', sala_id=sala.id) }}" class="list-group-item bg-transparent text-white border-bottom border-white border-opacity-10 py-3 d-flex justify-content-between align-items-center px-0">
-                    <div>
-                        <div class="fw-bold">{{ sala.nome }}</div>
-                        <small class="text-muted">{{ sala.bloco }}</small>
-                    </div>
-                    <span class="badge rounded-pill bg-primary">Abrir Chat</span>
-                </a>
-                {% endfor %}
+            <h5 class="fw-bold mb-4 text-uppercase" style="font-size: 0.9rem;">Solicitações de Relocação</h5>
+            {% if relocacoes %}
+            <div class="table-responsive">
+                <table class="table align-middle table-sm border-0">
+                    <thead>
+                        <tr>
+                            <th>Patrimônio</th>
+                            <th>Para</th>
+                            <th>Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in relocacoes %}
+                        <tr>
+                            <td>
+                                <div class="fw-bold small">{{ r.patrimonio.numero_patrimonio }}</div>
+                                <div class="text-muted" style="font-size: 0.7rem;">Inv: {{ r.responsavel.nome }}</div>
+                            </td>
+                            <td><span class="badge bg-success text-uppercase" style="font-size: 0.6rem;">{{ r.sala_destino.nome }}</span></td>
+                            <td>
+                                <a href="{{ url_for('admin_processar_relocacao', id=r.id, acao='aprovar') }}" class="btn btn-success btn-sm me-1" style="font-size: 0.6rem;">SIM</a>
+                                <a href="{{ url_for('admin_processar_relocacao', id=r.id, acao='recusar') }}" class="btn btn-link text-danger btn-sm" style="font-size: 0.6rem;">NÃO</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
+            {% else %}
+            <div class="text-center py-5">
+                <p class="text-muted small">Sem solicitações de mudança pendentes.</p>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>

@@ -5,7 +5,18 @@ from datetime import datetime
 
 db = SQLAlchemy()
 
-# Tabela de associação para Responsáveis e Salas (Permite um responsável em várias salas)
+# --- Entidade SaaS Principal ---
+class Escola(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(150), nullable=False)
+    codigo_senai = db.Column(db.String(20), unique=True)
+    cidade = db.Column(db.String(100))
+    
+    usuarios = db.relationship('User', backref='escola', lazy=True)
+    salas = db.relationship('Sala', backref='escola', lazy=True)
+    patrimonios = db.relationship('Patrimonio', backref='escola', lazy=True)
+
+# Tabela de associação para Responsáveis e Salas
 responsavel_salas = db.Table('responsavel_salas',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
     db.Column('sala_id', db.Integer, db.ForeignKey('sala.id'), primary_key=True)
@@ -13,13 +24,13 @@ responsavel_salas = db.Table('responsavel_salas',
 
 class User(db.Model, UserMixin):
     id = db.Column(db.Integer, primary_key=True)
+    escola_id = db.Column(db.Integer, db.ForeignKey('escola.id'), nullable=False)
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
     role = db.Column(db.String(20), default='responsavel')  # 'admin' ou 'responsavel'
     nome = db.Column(db.String(100), nullable=False)
     
-    # Salas vinculadas (se for responsável)
     salas = db.relationship('Sala', secondary=responsavel_salas, backref=db.backref('responsaveis', lazy='dynamic'))
 
     def set_password(self, password):
@@ -30,6 +41,7 @@ class User(db.Model, UserMixin):
 
 class Sala(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    escola_id = db.Column(db.Integer, db.ForeignKey('escola.id'), nullable=False)
     nome = db.Column(db.String(100), nullable=False)
     bloco = db.Column(db.String(50))
     descricao = db.Column(db.Text)
@@ -38,20 +50,24 @@ class Sala(db.Model):
 
 class Patrimonio(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    escola_id = db.Column(db.Integer, db.ForeignKey('escola.id'), nullable=False)
     numero_patrimonio = db.Column(db.String(50), unique=True, nullable=False)
     descricao = db.Column(db.String(200), nullable=False)
     marca = db.Column(db.String(100))
     modelo = db.Column(db.String(100))
-    status = db.Column(db.String(20), default='ativo') # 'ativo', 'inativo'
+    status = db.Column(db.String(20), default='ativo') # 'ativo', 'inativo', 'descartado'
+    status_conservacao = db.Column(db.String(20), default='bom') # 'bom', 'quebrado'
+    imagem_url = db.Column(db.String(500))
     sala_id = db.Column(db.Integer, db.ForeignKey('sala.id'), nullable=False)
 
 class Inventario(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    escola_id = db.Column(db.Integer, db.ForeignKey('escola.id'), nullable=False)
     sala_id = db.Column(db.Integer, db.ForeignKey('sala.id'), nullable=False)
     responsavel_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     data_hora_inicio = db.Column(db.DateTime, default=datetime.utcnow)
     data_hora_fim = db.Column(db.DateTime)
-    status = db.Column(db.String(20), default='iniciado') # 'iniciado', 'concluido', 'validado'
+    status = db.Column(db.String(20), default='iniciado')
 
     sala = db.relationship('Sala', backref='inventarios')
     responsavel = db.relationship('User', backref='inventarios')
@@ -59,18 +75,20 @@ class Inventario(db.Model):
 class ItemInventario(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     inventario_id = db.Column(db.Integer, db.ForeignKey('inventario.id'), nullable=False)
-    patrimonio_id = db.Column(db.Integer, db.ForeignKey('patrimonio.id'), nullable=True) # Null se não existir no sistema
-    sala_id_da_vez = db.Column(db.Integer, db.ForeignKey('sala.id')) # Sala onde foi encontrado
+    patrimonio_id = db.Column(db.Integer, db.ForeignKey('patrimonio.id'), nullable=True)
+    sala_id_da_vez = db.Column(db.Integer, db.ForeignKey('sala.id'))
     status = db.Column(db.String(30)) # 'confirmado', 'alterado', 'fora_de_lugar', 'nao_encontrado'
+    status_conservacao_visto = db.Column(db.String(20))
     observacao = db.Column(db.Text)
 
 class SolicitacaoRealocacao(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    escola_id = db.Column(db.Integer, db.ForeignKey('escola.id'), nullable=False)
     patrimonio_id = db.Column(db.Integer, db.ForeignKey('patrimonio.id'), nullable=False)
     sala_origem_id = db.Column(db.Integer, db.ForeignKey('sala.id'), nullable=False)
     sala_destino_id = db.Column(db.Integer, db.ForeignKey('sala.id'), nullable=False)
     responsavel_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    status = db.Column(db.String(20), default='pendente') # 'pendente', 'aprovado', 'recusado'
+    status = db.Column(db.String(20), default='pendente')
     observacao = db.Column(db.Text)
     data_solicitacao = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -81,9 +99,10 @@ class SolicitacaoRealocacao(db.Model):
 
 class MensagemChat(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    escola_id = db.Column(db.Integer, db.ForeignKey('escola.id'), nullable=False)
     sala_id = db.Column(db.Integer, db.ForeignKey('sala.id'), nullable=False)
     usuario_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    usuario_tipo = db.Column(db.String(20)) # 'adm' ou 'responsavel'
+    usuario_tipo = db.Column(db.String(20))
     texto = db.Column(db.Text, nullable=False)
     data_hora = db.Column(db.DateTime, default=datetime.utcnow)
     lida = db.Column(db.Boolean, default=False)
