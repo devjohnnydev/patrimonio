@@ -128,7 +128,7 @@
                         <tr>
                             <td class="fw-bold">{{ inv.sala.nome }}</td>
                             <td>{{ inv.responsavel.nome }}</td>
-                            <td>{{ inv.data_hora_fim.strftime('%d/%m/%Y %H:%M') }}</td>
+                            <td>{{ inv.data_hora_fim.strftime('%d/%m/%Y %H:%M') if inv.data_hora_fim else 'N/A' }}</td>
                             <td>
                                 <a href="{{ url_for('admin_balanco_inventario', inv_id=inv.id) }}" class="btn btn-primary btn-sm fw-bold">VER BALANÇO</a>
                             </td>
