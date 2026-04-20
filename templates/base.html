@@ -26,22 +26,22 @@
                 {% if current_user.role in ['admin', 'coordenador'] %}
                 <li class="nav-item">
                     <a href="{{ url_for('admin_dashboard') }}" class="nav-link {{ 'active' if request.endpoint == 'admin_dashboard' }}">
-                        Portal de Gestão
+                        Painel de Balanço
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="{{ url_for('admin_salas') }}" class="nav-link {{ 'active' if request.endpoint == 'admin_salas' }}">
-                        Salas & Ambientes
+                        Ambientes (Salas)
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="{{ url_for('admin_patrimonios') }}" class="nav-link {{ 'active' if request.endpoint == 'admin_patrimonios' }}">
-                        Gestão de Bens
+                        Cadastro de Bens
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="{{ url_for('admin_responsaveis') }}" class="nav-link {{ 'active' if request.endpoint == 'admin_responsaveis' }}">
-                        Equipe (Prof/Coord)
+                        Lista de Funcionários
                     </a>
                 </li>
                 {% else %}

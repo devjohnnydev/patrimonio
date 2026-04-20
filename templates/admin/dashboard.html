@@ -105,30 +105,25 @@
             </div>
             
             <div class="table-responsive">
-                <table class="table align-middle">
+                <table class="table table-hover align-middle">
                     <thead>
                         <tr>
-                            <th>Data/Hora</th>
                             <th>Ambiente</th>
-                            <th>Professor</th>
+                            <th>Professor Responsável</th>
+                            <th>Data/Hora</th>
                             <th>Ação</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% set inv_pendentes = [] %}
-                        {# Filtramos via template os concluídos #}
-                        {# Nota: Em uma app maior, faríamos isso na rota #}
-                        {% for sala in salas %}
-                            {% for inv in sala.inventarios if inv.status == 'concluido' %}
-                                <tr>
-                                    <td>{{ inv.data_hora_fim.strftime('%d/%m/%Y %H:%M') }}</td>
-                                    <td><span class="fw-bold">{{ sala.nome }}</span></td>
-                                    <td>{{ inv.responsavel.nome }}</td>
-                                    <td>
-                                        <a href="{{ url_for('admin_conferir_inventario', inv_id=inv.id) }}" class="btn btn-dark btn-sm text-uppercase fw-bold" style="font-size: 0.6rem;">Conferir Conflitos</a>
-                                    </td>
-                                </tr>
-                            {% endfor %}
+                        {% for inv in inventarios_concluidos %}
+                        <tr>
+                            <td class="fw-bold">{{ inv.sala.nome }}</td>
+                            <td>{{ inv.responsavel.nome }}</td>
+                            <td>{{ inv.data_hora_fim.strftime('%d/%m/%Y %H:%M') }}</td>
+                            <td>
+                                <a href="{{ url_for('admin_balanco_inventario', inv_id=inv.id) }}" class="btn btn-primary btn-sm fw-bold">VER BALANÇO</a>
+                            </td>
+                        </tr>
                         {% endfor %}
                     </tbody>
                 </table>

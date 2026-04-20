@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-4 d-flex justify-content-between align-items-end">
+    <div>
+        <div class="badge bg-dark rounded-0 mb-2">RELATÓRIO CONSOLIDADO</div>
+        <h2 class="fw-bold text-uppercase mb-0">Balanço de Inventário: {{ inv.sala.nome }}</h2>
+        <p class="text-muted small">Finalizado em: {{ inv.data_hora_fim.strftime('%d/%m/%Y %H:%M') if inv.data_hora_fim else 'Em andamento' }}</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-dark fw-bold" onclick="window.print()">🖨️ IMPRIMIR BALANÇO</button>
+        <a href="{{ url_for('admin_validar_inventario', inv_id=inv.id) }}" class="btn btn-success fw-bold">VALIDAR E ARQUIVAR</a>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Resumo Numérico -->
+    <div class="col-md-3">
+        <div class="card p-3 text-center border-success">
+            <h1 class="fw-bold text-success">{{ confirmados|length }}</h1>
+            <div class="small fw-bold text-uppercase">Itens Confirmados</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card p-3 text-center border-danger">
+            <h1 class="fw-bold text-danger">{{ faltantes|length }}</h1>
+            <div class="small fw-bold text-uppercase">Itens Faltantes</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card p-3 text-center border-warning">
+            <h1 class="fw-bold text-warning">{{ fora_de_lugar|length }}</h1>
+            <div class="small fw-bold text-uppercase">Fora de Lugar</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card p-3 text-center border-secondary">
+            <h1 class="fw-bold text-secondary">{{ nao_encontrados|length }}</h1>
+            <div class="small fw-bold text-uppercase">Não Cadastrados</div>
+        </div>
+    </div>
+
+    <!-- Detalhamento -->
+    <div class="col-12">
+        <div class="card p-4">
+            <h5 class="fw-bold mb-4 text-uppercase border-bottom pb-2">Detalhamento das Divergências</h5>
+            
+            {% if faltantes %}
+            <div class="mb-4">
+                <h6 class="text-danger fw-bold"><i class="me-2">❌</i> ITENS NÃO LOCALIZADOS NO AMBIENTE</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Patrimônio</th>
+                                <th>Descrição</th>
+                                <th>Marca/Modelo</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for p in faltantes %}
+                            <tr>
+                                <td class="font-monospace fw-bold">{{ p.numero_patrimonio }}</td>
+                                <td>{{ p.descricao }}</td>
+                                <td>{{ p.marca }} {{ p.modelo }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if fora_de_lugar %}
+            <div class="mb-4">
+                <h6 class="text-warning fw-bold"><i class="me-2">⚠️</i> ITENS ENCONTRADOS (PERTENCEM A OUTRA SALA)</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Patrimônio</th>
+                                <th>Descrição</th>
+                                <th>Origem Correta</th>
+                                <th>Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for r in fora_de_lugar %}
+                            <tr>
+                                <td class="font-monospace fw-bold">{{ r.patrimonio.numero_patrimonio }}</td>
+                                <td>{{ r.patrimonio.descricao }}</td>
+                                <td>{{ r.patrimonio.sala.nome }}</td>
+                                <td><span class="badge bg-warning">Realocação Solicitada</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+            
+            {% if not faltantes and not fora_de_lugar and not nao_encontrados %}
+            <div class="alert alert-success text-center py-5">
+                <h4 class="fw-bold">Balanço 100% Conciliado!</h4>
+                <p class="mb-0">Todos os itens esperados foram localizados no ambiente.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+@media print {
+    .sidebar, .btn, .badge-dark { display: none !important; }
+    .card { border: 1px solid #ddd !important; box-shadow: none !important; }
+    body { background: white !important; }
+}
+</style>
+{% endblock %}

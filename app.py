@@ -112,9 +112,7 @@ def admin_dashboard():
         filter(User.escola_id == e_id).\
         group_by(User.nome).all()
 
-    salas = Sala.query.filter_by(escola_id=e_id).all()
-    relocacoes = SolicitacaoRealocacao.query.filter_by(escola_id=e_id, status='pendente').all()
-    quebrados = Patrimonio.query.filter_by(escola_id=e_id, status_conservacao='quebrado').all()
+    inventarios_concluidos = Inventario.query.filter_by(escola_id=e_id, status='concluido').all()
     
     return render_template('admin/dashboard.html', 
                            stats=stats, 
@@ -123,7 +121,8 @@ def admin_dashboard():
                            quebrados=quebrados,
                            itens_por_sala=itens_por_sala,
                            conservacao_stats=conservacao_stats,
-                           produtividade=produtividade)
+                           produtividade=produtividade,
+                           inventarios_concluidos=inventarios_concluidos)
 
 @app.route('/sala/exportar/<int:sala_id>')
 @login_required
@@ -292,29 +291,28 @@ def admin_descartar(id):
     flash('Item enviado para descarte!', 'success')
     return redirect(url_for('admin_dashboard'))
 
-# Conferência de Inventário (Conflitos)
-@app.route('/admin/conferir/<int:inv_id>')
+# Balanço de Inventário (Resultados Consolidados)
+@app.route('/admin/balanco/<int:inv_id>')
 @login_required
-def admin_conferir_inventario(inv_id):
+def admin_balanco_inventario(inv_id):
     if current_user.role not in ['admin', 'coordenador']: return redirect(url_for('index'))
     inv = Inventario.query.filter_by(id=inv_id, escola_id=current_user.escola_id).first_or_404()
     
-    # Itens esperados na sala
+    # Itens esperados vs Registrados
     esperados = Patrimonio.query.filter_by(sala_id=inv.sala_id, status='ativo').all()
-    # Itens registrados no inventario
     registrados = ItemInventario.query.filter_by(inventario_id=inv.id).all()
-    registrados_ids = [r.patrimonio_id for r in registrados if r.patrimonio_id]
     
-    # Detectar Faltantes
-    faltantes = []
-    for p in esperados:
-        if p.id not in registrados_ids:
-            faltantes.append(p)
-            
-    # Detectar Extras/Fora de Lugar (Já registrados no ItemInventario)
-    extras = [r for r in registrados if r.status in ['fora_de_lugar', 'nao_encontrado']]
+    confirmados = [r for r in registrados if r.status == 'confirmado']
+    faltantes = [p for p in esperados if p.id not in [r.patrimonio_id for r in registrados]]
+    fora_de_lugar = [r for r in registrados if r.status == 'fora_de_lugar']
+    nao_encontrados = [r for r in registrados if r.status == 'nao_encontrado']
     
-    return render_template('admin/conferir_inventario.html', inv=inv, esperados=esperados, registrados=registrados, faltantes=faltantes, extras=extras)
+    return render_template('admin/balanco.html', 
+                           inv=inv, 
+                           confirmados=confirmados, 
+                           faltantes=faltantes, 
+                           fora_de_lugar=fora_de_lugar,
+                           nao_encontrados=nao_encontrados)
 
 @app.route('/admin/validar_inventario/<int:inv_id>')
 @login_required
@@ -515,101 +513,27 @@ def api_chat(sala_id):
         })
     return jsonify(res)
 
-# --- Inicialização ---
+# --- Inicialização Direcionada (Fresh Start) ---
 def seed():
     if not Escola.query.first():
-        # Escola 1: SENAI São Paulo - Unidade Ipiranga
-        e1 = Escola(nome='SENAI Ipiranga', codigo_senai='1.01', cidade='São Paulo')
-        # Escola 2: SENAI São Paulo - Unidade Vila Mariana
-        e2 = Escola(nome='SENAI Vila Mariana', codigo_senai='1.02', cidade='São Paulo')
-        db.session.add_all([e1, e2])
+        # Única Estrutura Fixa: SENAI São Paulo
+        e1 = Escola(nome='SENAI São Paulo', codigo_senai='SP-01', cidade='São Paulo')
+        db.session.add(e1)
         db.session.commit()
 
-        # Admin Escola 1
-        admin = User(username='admin', email='admin@senai.br', nome='Admin SENAI', role='admin', escola_id=e1.id)
+        # Admin Master Limpo
+        admin = User(username='admin', email='admin@senai.br', nome='Administrador Master', role='admin', escola_id=e1.id)
         admin.set_password('admin123')
-        
-        # Coordenador Escola 1
-        coord = User(username='marcos', email='marcos@senai.br', nome='Marcos Coordenador', role='coordenador', escola_id=e1.id)
-        coord.set_password('marcos123')
-        
-        # Professor Escola 1
-        prof = User(username='joao', email='joao@senai.br', nome='João Silva', role='professor', escola_id=e1.id)
-        prof.set_password('joao123')
-        
-        db.session.add_all([admin, coord, prof])
-        
-        # Salas Escola 1
-        s1 = Sala(nome='Oficina de Automobilística', bloco='A', descricao='Oficina principal', escola_id=e1.id)
-        s2 = Sala(nome='Laboratório de Metrologia', bloco='B', descricao='Lab de medição', escola_id=e1.id)
-        db.session.add_all([s1, s2])
+        db.session.add(admin)
         db.session.commit()
-        
-        # Vincular João Silva (Professor) à Oficina
-        prof.salas.append(s1)
+        print("Ambiente Limpo: Sistema pronto para dados reais.")
 
-        # Patrimônios Escola 1 (Links de imagem de exemplo)
-        p1 = Patrimonio(
-            numero_patrimonio='984640',
-            descricao='JOGO CALIBRADORES DE ROSCA/COSA',
-            marca='Mitutoyo',
-            modelo='H-21',
-            imagem_url='https://images.unsplash.com/photo-1541013726909-002d99d3e55c?q=80&w=200&auto=format&fit=crop',
-            sala_id=s2.id,
-            escola_id=e1.id
-        )
-        p2 = Patrimonio(
-            numero_patrimonio='1175858',
-            descricao='CADEIRA FIXA POLIPROPILENO AZUL',
-            marca='Plaxmetal',
-            modelo='Linha Office',
-            imagem_url='https://images.unsplash.com/photo-1592074522340-025515c0e7ed?q=80&w=200&auto=format&fit=crop',
-            sala_id=s1.id,
-            escola_id=e1.id
-        )
-        db.session.add_all([p1, p2])
-        db.session.commit()
-        print("Seed SaaS finalizado.")
-
-# Criar tabelas e rodar seed com verificação de integridade SaaS
+# Verificação e Reset Forçado para Limpeza
 with app.app_context():
-    from sqlalchemy import inspect
-    inspector = inspect(db.engine)
-    
-    # Verifica se a tabela 'user' tem a coluna 'escola_id' (critério para o modelo SaaS)
-    tabelas = inspector.get_table_names()
-    precisa_reset = False
-    
-    if 'user' in tabelas:
-        colunas_user = [c['name'] for c in inspector.get_columns('user')]
-        if 'escola_id' not in colunas_user:
-            precisa_reset = True
-            print("Detectado banco de dados antigo (sem escola_id).")
-    
-    if 'escola' not in tabelas:
-        precisa_reset = True
-        print("Detectado banco de dados incompleto (tabela 'escola' ausente).")
-    
-    if 'sala' in tabelas:
-        colunas_sala = [c['name'] for c in inspector.get_columns('sala')]
-        if 'imagem_url' not in colunas_sala:
-            precisa_reset = True
-            print("Detectado banco de dados sem suporte a fotos de ambiente.")
-
-    if precisa_reset:
-        print("Forçando recriação do banco de dados para migração SaaS...")
-        try:
-            db.drop_all()
-            db.create_all()
-            seed()
-            print("Banco de dados recriado com sucesso.")
-        except Exception as e:
-            print(f"Erro ao recriar banco: {e}")
-    else:
-        # Garante que as tabelas existam se o banco estiver vazio
-        db.create_all()
-        seed()
-        print("Esquema verificado: OK.")
+    # Para garantir a limpeza total solicitada, vamos resetar nesta execução
+    db.drop_all()
+    db.create_all()
+    seed()
 
 if __name__ == '__main__':
     app.run(debug=True)
