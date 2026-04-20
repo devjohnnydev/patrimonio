@@ -293,6 +293,12 @@ def admin_responsaveis():
             if s: novo_u.salas.append(s)
         db.session.add(novo_u)
         db.session.commit()
+        flash('Responsável cadastrado com sucesso!', 'success')
+        return redirect(url_for('admin_responsaveis'))
+    
+    responsaveis = User.query.filter_by(role='responsavel', escola_id=e_id).all()
+    salas = Sala.query.filter_by(escola_id=e_id).all()
+    return render_template('admin/responsaveis.html', responsaveis=responsaveis, salas=salas)
 
 # Validação de Relocação
 @app.route('/admin/relocacao/<int:id>/<string:acao>')
