@@ -472,6 +472,7 @@ def admin_descartar(id):
 # Balanço de Inventário (Resultados Consolidados)
 @app.route('/admin/balanco/<int:inv_id>')
 @login_required
+def admin_balanco_inventario(inv_id):
     # Buscar inventário de forma limpa e segura
     try:
         inv = Inventario.query.filter_by(id=inv_id, escola_id=current_user.escola_id).first_or_404()
