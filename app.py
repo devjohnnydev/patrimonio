@@ -24,7 +24,14 @@ login_manager.login_view = 'login'
 def load_user(user_id):
     return User.query.get(int(user_id))
 
-# --- Filtros Customizados ---
+# --- Auxiliares e Mock de E-mail ---
+def mock_enviar_email(destinatario, assunto, corpo):
+    print("\n--- [SIMULAÇÃO DE E-MAIL] ---")
+    print(f"PARA: {destinatario}")
+    print(f"ASSUNTO: {assunto}")
+    print(f"MENSAGEM: {corpo}")
+    print("-----------------------------\n")
+
 @app.template_filter('status_badge')
 def status_badge(status):
     badges = {
@@ -36,7 +43,9 @@ def status_badge(status):
         'confirmado': 'success',
         'alterado': 'info',
         'fora_de_lugar': 'warning',
-        'nao_encontrado': 'danger'
+        'nao_encontrado': 'danger',
+        'concluido': 'primary',
+        'validado': 'dark'
     }
     return badges.get(status, 'primary')
 
@@ -141,13 +150,48 @@ def admin_descartar(id):
     flash('Item enviado para descarte!', 'success')
     return redirect(url_for('admin_dashboard'))
 
-# CRUD Responsáveis
+# Conferência de Inventário (Conflitos)
+@app.route('/admin/conferir/<int:inv_id>')
+@login_required
+def admin_conferir_inventario(inv_id):
+    if current_user.role != 'admin': return redirect(url_for('index'))
+    inv = Inventario.query.filter_by(id=inv_id, escola_id=current_user.escola_id).first_or_404()
+    
+    # Itens esperados na sala
+    esperados = Patrimonio.query.filter_by(sala_id=inv.sala_id, status='ativo').all()
+    # Itens registrados no inventario
+    registrados = ItemInventario.query.filter_by(inventario_id=inv.id).all()
+    registrados_ids = [r.patrimonio_id for r in registrados if r.patrimonio_id]
+    
+    # Detectar Faltantes
+    faltantes = []
+    for p in esperados:
+        if p.id not in registrados_ids:
+            faltantes.append(p)
+            
+    # Detectar Extras/Fora de Lugar (Já registrados no ItemInventario)
+    extras = [r for r in registrados if r.status in ['fora_de_lugar', 'nao_encontrado']]
+    
+    return render_template('admin/conferir_inventario.html', inv=inv, esperados=esperados, registrados=registrados, faltantes=faltantes, extras=extras)
+
+@app.route('/admin/validar_inventario/<int:inv_id>')
+@login_required
+def admin_validar_inventario(inv_id):
+    if current_user.role != 'admin': return redirect(url_for('index'))
+    inv = Inventario.query.filter_by(id=inv_id, escola_id=current_user.escola_id).first_or_404()
+    inv.status = 'validado'
+    db.session.commit()
+    flash('Inventário validado e arquivado!', 'success')
+    return redirect(url_for('admin_dashboard'))
+
+# CRUD Responsáveis (Com Notificação)
 @app.route('/admin/responsaveis', methods=['GET', 'POST'])
 @login_required
 def admin_responsaveis():
     if current_user.role != 'admin': return redirect(url_for('index'))
     e_id = current_user.escola_id
     if request.method == 'POST':
+        senha_pura = request.form.get('password')
         novo_u = User(
             username=request.form.get('username'),
             email=request.form.get('email'),
@@ -155,16 +199,21 @@ def admin_responsaveis():
             role='responsavel',
             escola_id=e_id
         )
-        novo_u.set_password(request.form.get('password'))
+        novo_u.set_password(senha_pura)
+        
+        # Enviar Notificação
+        mock_enviar_email(
+            novo_u.email, 
+            f"Seu Acesso ao Sistema SENAI - {current_user.escola.nome}",
+            f"Olá {novo_u.nome}, seu acesso foi criado.\nUsuário: {novo_u.username}\nSenha: {senha_pura}\nUnidade: {current_user.escola.nome}"
+        )
+        
         sala_ids = request.form.getlist('sala_ids')
         for sid in sala_ids:
             s = Sala.query.filter_by(id=sid, escola_id=e_id).first()
             if s: novo_u.salas.append(s)
         db.session.add(novo_u)
         db.session.commit()
-    responsaveis = User.query.filter_by(role='responsavel', escola_id=e_id).all()
-    salas = Sala.query.filter_by(escola_id=e_id).all()
-    return render_template('admin/responsaveis.html', responsaveis=responsaveis, salas=salas)
 
 # Validação de Relocação
 @app.route('/admin/relocacao/<int:id>/<string:acao>')

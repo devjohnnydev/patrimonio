@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('admin_dashboard') }}" class="text-primary text-decoration-none text-uppercase small fw-bold">Dashboard</a></li>
+            <li class="breadcrumb-item active text-muted small fw-bold text-uppercase" aria-current="page">Conferência</li>
+        </ol>
+    </nav>
+    <h2 class="fw-bold">Conferência de Inventário</h2>
+    <p class="text-muted">Ambiente: <strong>{{ inv.sala.nome }}</strong> | Professor: <strong>{{ inv.responsavel.nome }}</strong></p>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-7">
+        <div class="card p-4 h-100 shadow-sm border-0 border-start border-4 border-danger">
+            <h5 class="fw-bold mb-4 text-uppercase small">Itens Não Encontrados (Conflitos)</h5>
+            {% if faltantes %}
+            <div class="table-responsive">
+                <table class="table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Patrimônio</th>
+                            <th>Descrição</th>
+                            <th>Status Esperado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for f in faltantes %}
+                        <tr class="table-danger">
+                            <td class="font-monospace fw-bold">{{ f.numero_patrimonio }}</td>
+                            <td>{{ f.descricao }}</td>
+                            <td><span class="badge bg-danger text-uppercase" style="font-size: 0.6rem;">FALTANTE</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <div class="text-success display-6 mb-3">✓</div>
+                <p class="text-muted fw-bold text-uppercase small">Todos os bens esperados foram localizados!</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="col-md-5">
+        <div class="card p-4 h-100 shadow-sm">
+            <h5 class="fw-bold mb-4 text-uppercase small">Resumo da Conferência</h5>
+            
+            <div class="list-group list-group-flush mb-4">
+                <div class="list-group-item d-flex justify-content-between align-items-center bg-transparent">
+                    Total Esperado <span class="badge bg-secondary rounded-pill">{{ esperados|length }}</span>
+                </div>
+                <div class="list-group-item d-flex justify-content-between align-items-center bg-transparent">
+                    Total Encontrado <span class="badge bg-success rounded-pill">{{ registrados|length }}</span>
+                </div>
+                <div class="list-group-item d-flex justify-content-between align-items-center bg-transparent text-danger fw-bold">
+                    Divergências <span class="badge bg-danger rounded-pill">{{ faltantes|length + extras|length }}</span>
+                </div>
+            </div>
+
+            <div class="alert alert-light border border-secondary border-opacity-10 small">
+                <strong>Observações Extras:</strong>
+                <ul class="mb-0 mt-1 ps-3">
+                    {% for r in registrados if r.status in ['fora_de_lugar', 'nao_encontrado'] %}
+                    <li>Item <strong>{{ r.patrimonio.numero_patrimonio or 'Desconhecido' }}</strong>: {{ r.status|replace('_', ' ')|upper }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <div class="mt-auto pt-3">
+                <a href="{{ url_for('admin_validar_inventario', inv_id=inv.id) }}" class="btn btn-primary w-100 py-3 fw-bold text-uppercase shadow-sm">VALIDAR E ARQUIVAR</a>
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-link text-muted w-100 mt-2 text-decoration-none small">Voltar sem validar</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

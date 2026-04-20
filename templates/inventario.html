@@ -7,6 +7,20 @@
     <p class="text-muted small">Escola: {{ current_user.escola.nome }}</p>
 </div>
 
+<!-- Scanner Mobile -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card p-3 border-danger shadow-sm">
+            <div id="reader" style="width: 100%; max-width: 600px; margin: 0 auto;" class="d-none"></div>
+            <div class="text-center mt-2">
+                <button id="toggleScanner" class="btn btn-dark w-100 py-3 fw-bold">
+                    <span class="me-2">📷</span> ABRIR CÂMERA PARA SCANNER
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row g-4">
     <!-- Registro -->
     <div class="col-md-5">
@@ -80,7 +94,46 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 <script>
+const reader = document.getElementById('reader');
+const toggleBtn = document.getElementById('toggleScanner');
+let html5QrCode;
+
+toggleBtn.addEventListener('click', () => {
+    if (reader.classList.contains('d-none')) {
+        reader.classList.remove('d-none');
+        toggleBtn.innerText = "PARAR SCANNER";
+        startScanner();
+    } else {
+        stopScanner();
+        reader.classList.add('d-none');
+        toggleBtn.innerText = "ABRIR CÂMERA PARA SCANNER";
+    }
+});
+
+function startScanner() {
+    html5QrCode = new Html5Qrcode("reader");
+    html5QrCode.start(
+        { facingMode: "environment" }, 
+        { fps: 10, qrbox: { width: 250, height: 250 } },
+        (decodedText, decodedResult) => {
+            document.getElementById('patInput').value = decodedText;
+            stopScanner();
+            reader.classList.add('d-none');
+            toggleBtn.innerText = "ABRIR CÂMERA PARA SCANNER";
+            document.getElementById('scanForm').dispatchEvent(new Event('submit'));
+        },
+        (errorMessage) => { /* Ignore many errors */ }
+    ).catch((err) => console.error(err));
+}
+
+function stopScanner() {
+    if (html5QrCode) {
+        html5QrCode.stop().then(() => html5QrCode.clear());
+    }
+}
+
 document.getElementById('scanForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
