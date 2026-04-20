@@ -763,20 +763,21 @@ def seed():
 
 # Verificação e Reset Forçado para Limpeza
 with app.app_context():
-    # Criar tabelas se não existirem (sem apagar os dados atuais)
-    db.create_all()
-
     # Migração Manual Silenciosa para garantir novos campos no Railway/Postgres
+    # Deve rodar ANTES de qualquer query no DB
     try:
         from sqlalchemy import text
         with db.engine.connect() as conn:
             # Postgres: ADD COLUMN IF NOT EXISTS
             conn.execute(text("ALTER TABLE inventario ADD COLUMN IF NOT EXISTS data_limite TIMESTAMP;"))
+            conn.execute(text("ALTER TABLE mensagem_chat ADD COLUMN IF NOT EXISTS lida BOOLEAN DEFAULT FALSE;"))
             conn.commit()
-            print("Migração: Coluna 'data_limite' verificada/adicionada.")
+            print("Migração: Colunas verificadas/adicionadas com sucesso.")
     except Exception as e:
-        print(f"Migração ignorada ou já realizada: {e}")
+        print(f"Migração manual: {e}")
 
+    # Criar tabelas se não existirem
+    db.create_all()
     seed()
 
 if __name__ == '__main__':
