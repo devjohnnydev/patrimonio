@@ -668,8 +668,7 @@ def seed():
 
 # Verificação e Reset Forçado para Limpeza
 with app.app_context():
-    # Para garantir a limpeza total solicitada, vamos resetar nesta execução
-    db.drop_all()
+    # Criar tabelas se não existirem (sem apagar os dados atuais)
     db.create_all()
     seed()
 

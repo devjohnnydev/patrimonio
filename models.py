@@ -32,7 +32,7 @@ class User(db.Model, UserMixin):
     nome = db.Column(db.String(100), nullable=False)
     foto_url = db.Column(db.String(500)) # Foto de perfil
     
-    salas = db.relationship('Sala', secondary=responsavel_salas, backref=db.backref('responsaveis', lazy='dynamic'))
+    salas = db.relationship('Sala', secondary=responsavel_salas, backref=db.backref('responsaveis', lazy=True))
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)

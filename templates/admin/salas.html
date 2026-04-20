@@ -43,7 +43,7 @@
                                     data-bloco="{{ s.bloco }}"
                                     data-descricao="{{ s.descricao }}"
                                     data-imagem="{{ s.imagem_url }}"
-                                    data-profs="{{ s.responsaveis|map(attribute='id')|list|tojson }}">
+                                    data-profs="{{ s.responsaveis.all()|map(attribute='id')|list|tojson }}">
                                 Editar
                             </button>
                             <a href="{{ url_for('chat', sala_id=s.id) }}" class="btn btn-outline-primary btn-sm">Chat</a>
