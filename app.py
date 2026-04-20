@@ -55,9 +55,9 @@ def status_badge(status):
 @app.route('/')
 def index():
     if current_user.is_authenticated:
-        if current_user.role == 'admin':
+        if current_user.role in ['admin', 'coordenador']:
             return redirect(url_for('admin_dashboard'))
-        return redirect(url_for('responsavel_dashboard'))
+        return redirect(url_for('professor_dashboard'))
     return redirect(url_for('login'))
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -82,7 +82,7 @@ def logout():
 @app.route('/admin')
 @login_required
 def admin_dashboard():
-    if current_user.role != 'admin':
+    if current_user.role not in ['admin', 'coordenador']:
         return redirect(url_for('index'))
     
     e_id = current_user.escola_id
@@ -235,7 +235,7 @@ def admin_importar_excel():
 @app.route('/admin/salas', methods=['GET', 'POST'])
 @login_required
 def admin_salas():
-    if current_user.role != 'admin': return redirect(url_for('index'))
+    if current_user.role not in ['admin', 'coordenador']: return redirect(url_for('index'))
     e_id = current_user.escola_id
     if request.method == 'POST':
         nova_sala = Sala(
@@ -254,7 +254,7 @@ def admin_salas():
 @app.route('/admin/patrimonios', methods=['GET', 'POST'])
 @login_required
 def admin_patrimonios():
-    if current_user.role != 'admin': return redirect(url_for('index'))
+    if current_user.role not in ['admin', 'coordenador']: return redirect(url_for('index'))
     e_id = current_user.escola_id
     if request.method == 'POST':
         novo_pat = Patrimonio(
@@ -276,7 +276,7 @@ def admin_patrimonios():
 @app.route('/admin/descartar/<int:id>')
 @login_required
 def admin_descartar(id):
-    if current_user.role != 'admin': return redirect(url_for('index'))
+    if current_user.role not in ['admin', 'coordenador']: return redirect(url_for('index'))
     pat = Patrimonio.query.filter_by(id=id, escola_id=current_user.escola_id).first_or_404()
     pat.status = 'descartado'
     pat.status_conservacao = 'descartado'
@@ -288,7 +288,7 @@ def admin_descartar(id):
 @app.route('/admin/conferir/<int:inv_id>')
 @login_required
 def admin_conferir_inventario(inv_id):
-    if current_user.role != 'admin': return redirect(url_for('index'))
+    if current_user.role not in ['admin', 'coordenador']: return redirect(url_for('index'))
     inv = Inventario.query.filter_by(id=inv_id, escola_id=current_user.escola_id).first_or_404()
     
     # Itens esperados na sala
@@ -311,18 +311,18 @@ def admin_conferir_inventario(inv_id):
 @app.route('/admin/validar_inventario/<int:inv_id>')
 @login_required
 def admin_validar_inventario(inv_id):
-    if current_user.role != 'admin': return redirect(url_for('index'))
+    if current_user.role not in ['admin', 'coordenador']: return redirect(url_for('index'))
     inv = Inventario.query.filter_by(id=inv_id, escola_id=current_user.escola_id).first_or_404()
     inv.status = 'validado'
     db.session.commit()
     flash('Inventário validado e arquivado!', 'success')
     return redirect(url_for('admin_dashboard'))
 
-# CRUD Responsáveis (Com Notificação)
+# CRUD Professores (Com Notificação)
 @app.route('/admin/responsaveis', methods=['GET', 'POST'])
 @login_required
 def admin_responsaveis():
-    if current_user.role != 'admin': return redirect(url_for('index'))
+    if current_user.role not in ['admin', 'coordenador']: return redirect(url_for('index'))
     e_id = current_user.escola_id
     if request.method == 'POST':
         senha_pura = request.form.get('password')
@@ -351,7 +351,7 @@ def admin_responsaveis():
         flash('Responsável cadastrado com sucesso!', 'success')
         return redirect(url_for('admin_responsaveis'))
     
-    responsaveis = User.query.filter_by(role='responsavel', escola_id=e_id).all()
+    responsaveis = User.query.filter(User.role.in_(['professor', 'coordenador']), User.escola_id == e_id).all()
     salas = Sala.query.filter_by(escola_id=e_id).all()
     return render_template('admin/responsaveis.html', responsaveis=responsaveis, salas=salas)
 
@@ -359,7 +359,7 @@ def admin_responsaveis():
 @app.route('/admin/relocacao/<int:id>/<string:acao>')
 @login_required
 def admin_processar_relocacao(id, acao):
-    if current_user.role != 'admin': return redirect(url_for('index'))
+    if current_user.role not in ['admin', 'coordenador']: return redirect(url_for('index'))
     req = SolicitacaoRealocacao.query.filter_by(id=id, escola_id=current_user.escola_id).first_or_404()
     if acao == 'aprovar':
         req.status = 'aprovado'
@@ -369,11 +369,11 @@ def admin_processar_relocacao(id, acao):
     db.session.commit()
     return redirect(url_for('admin_dashboard'))
 
-# --- Dashboard Responsável ---
-@app.route('/responsavel')
+# --- Dashboard Professor ---
+@app.route('/professor')
 @login_required
-def responsavel_dashboard():
-    if current_user.role != 'responsavel':
+def professor_dashboard():
+    if current_user.role != 'professor':
         return redirect(url_for('index'))
     return render_template('responsavel/dashboard.html', salas=current_user.salas)
 
@@ -470,7 +470,7 @@ def finalizar_inventario(inv_id):
     inv.data_hora_fim = datetime.utcnow()
     db.session.commit()
     flash('Inventário finalizado!', 'success')
-    return redirect(url_for('responsavel_dashboard'))
+    return redirect(url_for('professor_dashboard'))
 
 # --- Chat Logic ---
 @app.route('/chat/<int:sala_id>', methods=['GET', 'POST'])
@@ -481,7 +481,7 @@ def chat(sala_id):
         msg = MensagemChat(
             sala_id=sala_id,
             usuario_id=current_user.id,
-            usuario_tipo='adm' if current_user.role == 'admin' else 'responsavel',
+            usuario_tipo='adm' if current_user.role in ['admin', 'coordenador'] else 'professor',
             texto=request.form.get('texto')
         )
         db.session.add(msg)
@@ -521,11 +521,15 @@ def seed():
         admin = User(username='admin', email='admin@senai.br', nome='Admin SENAI', role='admin', escola_id=e1.id)
         admin.set_password('admin123')
         
-        # Responsável Escola 1
-        resp = User(username='joao', email='joao@senai.br', nome='João Silva', role='responsavel', escola_id=e1.id)
-        resp.set_password('joao123')
+        # Coordenador Escola 1
+        coord = User(username='marcos', email='marcos@senai.br', nome='Marcos Coordenador', role='coordenador', escola_id=e1.id)
+        coord.set_password('marcos123')
         
-        db.session.add_all([admin, resp])
+        # Professor Escola 1
+        prof = User(username='joao', email='joao@senai.br', nome='João Silva', role='professor', escola_id=e1.id)
+        prof.set_password('joao123')
+        
+        db.session.add_all([admin, coord, prof])
         
         # Salas Escola 1
         s1 = Sala(nome='Oficina de Automobilística', bloco='A', descricao='Oficina principal', escola_id=e1.id)
@@ -533,8 +537,8 @@ def seed():
         db.session.add_all([s1, s2])
         db.session.commit()
         
-        # Vincular João à Oficina
-        resp.salas.append(s1)
+        # Vincular João Silva (Professor) à Oficina
+        prof.salas.append(s1)
 
         # Patrimônios Escola 1 (Links de imagem de exemplo)
         p1 = Patrimonio(

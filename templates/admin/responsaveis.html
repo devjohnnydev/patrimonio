@@ -2,8 +2,8 @@
 
 {% block content %}
 <div class="mb-4 d-flex justify-content-between align-items-center">
-    <h2 class="fw-bold mb-0">Responsáveis por Sala</h2>
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#novoRespMod">Novo Responsável</button>
+    <h2 class="fw-bold mb-0 text-uppercase">Equipe: Coordenadores e Professores</h2>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#novoRespMod">Novo Membro</button>
 </div>
 
 <div class="card p-4">
@@ -12,23 +12,25 @@
             <thead>
                 <tr>
                     <th>Nome</th>
+                    <th>Perfil</th>
                     <th>Email</th>
-                    <th>Salas Atribuídas</th>
-                    <th>Ações</th>
+                    <th>Ambientes Designados</th>
                 </tr>
             </thead>
             <tbody>
                 {% for r in responsaveis %}
                 <tr>
                     <td class="fw-bold">{{ r.nome }}</td>
+                    <td>
+                        <span class="badge bg-{{ 'dark' if r.role == 'coordenador' else 'light text-dark border' }} text-uppercase">
+                            {{ r.role }}
+                        </span>
+                    </td>
                     <td>{{ r.email }}</td>
                     <td>
                         {% for s in r.salas %}
-                        <span class="badge bg-primary me-1">{{ s.nome }}</span>
+                        <span class="badge bg-danger me-1" style="font-size: 0.7rem;">{{ s.nome }}</span>
                         {% endfor %}
-                    </td>
-                    <td>
-                        <button class="btn btn-outline-light btn-sm">Editar</button>
                     </td>
                 </tr>
                 {% endfor %}
@@ -40,22 +42,29 @@
 <!-- Modal -->
 <div class="modal fade" id="novoRespMod" tabindex="-1">
     <div class="modal-dialog">
-        <form class="modal-content bg-dark text-white border-secondary" method="POST">
-            <div class="modal-header border-secondary">
-                <h5 class="modal-title">Cadastrar Responsável</h5>
+        <form class="modal-content border-0 shadow-lg" method="POST">
+            <div class="modal-header bg-dark text-white rounded-0">
+                <h5 class="modal-title small fw-bold">CADASTRAR MEMBRO DA EQUIPE</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body p-4">
                 <div class="mb-3">
-                    <label class="form-label">Nome Completo</label>
+                    <label class="form-label small fw-bold">Nome Completo</label>
                     <input type="text" name="nome" class="form-control" required>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Usuário (Login)</label>
+                    <label class="form-label small fw-bold">Perfil de Acesso</label>
+                    <select name="role" class="form-select">
+                        <option value="professor">Professor (Operacional)</option>
+                        <option value="coordenador">Coordenador (Gestão)</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Usuário (Login)</label>
                     <input type="text" name="username" class="form-control" required>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Email</label>
+                    <label class="form-label small fw-bold">Email</label>
                     <input type="email" name="email" class="form-control" required>
                 </div>
                 <div class="mb-3">

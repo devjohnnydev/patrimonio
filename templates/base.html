@@ -23,10 +23,10 @@
             </div>
             
             <ul class="nav flex-column mb-auto">
-                {% if current_user.role == 'admin' %}
+                {% if current_user.role in ['admin', 'coordenador'] %}
                 <li class="nav-item">
                     <a href="{{ url_for('admin_dashboard') }}" class="nav-link {{ 'active' if request.endpoint == 'admin_dashboard' }}">
-                        Dashboard Admin
+                        Portal de Gestão
                     </a>
                 </li>
                 <li class="nav-item">
@@ -36,18 +36,18 @@
                 </li>
                 <li class="nav-item">
                     <a href="{{ url_for('admin_patrimonios') }}" class="nav-link {{ 'active' if request.endpoint == 'admin_patrimonios' }}">
-                        Gestão de Patrimônio
+                        Gestão de Bens
                     </a>
                 </li>
                 <li class="nav-item">
                     <a href="{{ url_for('admin_responsaveis') }}" class="nav-link {{ 'active' if request.endpoint == 'admin_responsaveis' }}">
-                        Responsáveis
+                        Equipe (Prof/Coord)
                     </a>
                 </li>
                 {% else %}
                 <li class="nav-item">
-                    <a href="{{ url_for('responsavel_dashboard') }}" class="nav-link {{ 'active' if request.endpoint == 'responsavel_dashboard' }}">
-                        Meu Painel
+                    <a href="{{ url_for('professor_dashboard') }}" class="nav-link {{ 'active' if request.endpoint == 'professor_dashboard' }}">
+                        Portal do Professor
                     </a>
                 </li>
                 {% endif %}
