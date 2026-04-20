@@ -513,7 +513,7 @@ def professor_dashboard():
             'conflitos': conflitos,
             'quebrados': quebrados,
             'total_ativos': total_ativos,
-            'ultima_contagem': last_inv.data_hora_fim.strftime('%d/%m/%Y') if last_inv else 'N/A',
+            'ultima_contagem': last_inv.data_hora_fim.strftime('%d/%m/%Y') if last_inv and last_inv.data_hora_fim else 'N/A',
             'prazo': inv.data_limite.strftime('%d/%m/%Y') if inv and inv.data_limite else 'Sem prazo'
         })
         
