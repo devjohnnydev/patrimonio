@@ -427,7 +427,18 @@ def inventario_sala(sala_id):
     itens_esperados = Patrimonio.query.filter_by(sala_id=sala_id, status='ativo').all()
     conferidos_ids = [item.patrimonio_id for item in ItemInventario.query.filter_by(inventario_id=inv.id).all()]
     
-    return render_template('inventario.html', sala=sala, inventario=inv, itens_esperados=itens_esperados, conferidos_ids=conferidos_ids)
+    # Preparar itens para o JSON do Dashboard do Professor
+    itens_json = [{
+        "id": p.id,
+        "numero": p.numero_patrimonio,
+        "descricao": p.descricao
+    } for p in itens_esperados]
+    
+    return render_template('inventario.html', 
+                           sala=sala, 
+                           inventario=inv, 
+                           itens_esperados=itens_json, 
+                           conferidos_ids=conferidos_ids)
 
 # Registro de Ações de Balanço
 @app.route('/inventario/item/foto/<int:item_id>', methods=['POST'])
