@@ -5,8 +5,14 @@ from datetime import datetime
 import os
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'dev-secret-key-12345'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///patrimonio.db'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-12345')
+
+# Configuração para Railway / PostgreSQL
+database_url = os.environ.get('DATABASE_URL')
+if database_url and database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///patrimonio.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
@@ -299,15 +305,16 @@ def seed():
         admin.set_password('admin123')
         db.session.add(admin)
         
-        # Algumas salas iniciais
         s1 = Sala(nome='Auditório Principal', bloco='A', descricao='Espaço para eventos')
         s2 = Sala(nome='Laboratório 101', bloco='B', descricao='Laboratório de informática')
         db.session.add_all([s1, s2])
         db.session.commit()
         print("Seed finalizado: Admin (admin/admin123) criado.")
 
+# Criar tabelas automaticamente se não existirem
+with app.app_context():
+    db.create_all()
+    seed()
+
 if __name__ == '__main__':
-    with app.app_context():
-        db.create_all()
-        seed()
     app.run(debug=True)
