@@ -613,9 +613,12 @@ def finalizar_inventario(inv_id):
 @app.route('/chat/<int:sala_id>', methods=['GET', 'POST'])
 @login_required
 def chat(sala_id):
-    sala = Sala.query.get_or_404(sala_id)
+    # Segurança: Sala deve pertencer à escola do usuário
+    sala = Sala.query.filter_by(id=sala_id, escola_id=current_user.escola_id).first_or_404()
+    
     if request.method == 'POST':
         msg = MensagemChat(
+            escola_id=current_user.escola_id,
             sala_id=sala_id,
             usuario_id=current_user.id,
             usuario_tipo='adm' if current_user.role in ['admin', 'coordenador'] else 'professor',
@@ -623,7 +626,7 @@ def chat(sala_id):
         )
         db.session.add(msg)
         db.session.commit()
-        return redirect(url_for('chat', sala_id=sala_id))
+        return jsonify({"status": "ok"})
     
     mensagens = MensagemChat.query.filter_by(sala_id=sala_id).order_by(MensagemChat.data_hora.asc()).all()
     return render_template('chat.html', sala=sala, mensagens=mensagens)
@@ -632,11 +635,15 @@ def chat(sala_id):
 @app.route('/api/chat/<int:sala_id>')
 @login_required
 def api_chat(sala_id):
+    # Segurança: Sala deve pertencer à escola do usuário
+    sala = Sala.query.filter_by(id=sala_id, escola_id=current_user.escola_id).first_or_404()
+    
     mensagens = MensagemChat.query.filter_by(sala_id=sala_id).order_by(MensagemChat.data_hora.asc()).all()
     res = []
     for m in mensagens:
         res.append({
             'usuario': m.usuario.nome,
+            'foto': m.usuario.foto_url or f"https://api.dicebear.com/7.x/avataaars/svg?seed={m.usuario.username}",
             'tipo': m.usuario_tipo,
             'texto': m.texto,
             'data': m.data_hora.strftime('%H:%M'),

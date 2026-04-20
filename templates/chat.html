@@ -1,33 +1,55 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="mb-4">
-    <h2 class="fw-bold mb-0">Chat: {{ sala.nome }}</h2>
-    <p class="text-muted small">Canal direto entre Admin e Responsável</p>
+<div class="mb-4 d-flex justify-content-between align-items-center">
+    <div>
+        <h2 class="fw-bold mb-0 text-uppercase">Chat Técnico: {{ sala.nome }}</h2>
+        <p class="text-muted small mb-0">Canal direto entre Admin e Responsável</p>
+    </div>
+    <a href="{{ url_for('admin_dashboard') if current_user.role != 'professor' else url_for('professor_dashboard') }}" class="btn btn-outline-dark btn-sm fw-bold px-3">VOLTAR</a>
 </div>
 
 <div class="row">
-    <div class="col-md-8 offset-md-2">
-        <div class="card p-0 overflow-hidden shadow-lg">
-            <div id="chatBox" class="chat-container">
+    <div class="col-md-10 offset-md-1">
+        <div class="card chat-card border-0 shadow-lg overflow-hidden">
+            <div id="chatBox" class="chat-container p-4 bg-light" style="height: 500px; overflow-y: auto;">
                 <!-- Messages will be loaded here -->
-                {% for msg in mensagens %}
-                <div class="message {{ 'sent' if msg.usuario_id == current_user.id else 'received' }}">
-                    <div class="msg-meta fw-bold">{{ 'Você' if msg.usuario_id == current_user.id else msg.usuario.nome }} • {{ msg.data_hora.strftime('%H:%M') }}</div>
-                    <div class="msg-text">{{ msg.texto }}</div>
-                </div>
-                {% endfor %}
             </div>
             
-            <div class="p-3 border-top border-white border-opacity-10 bg-dark bg-opacity-50">
+            <div class="chat-footer p-3 bg-white border-top">
                 <form id="chatForm" class="d-flex gap-2">
-                    <input type="text" id="msgInput" class="form-control" placeholder="Digite sua mensagem..." required autocomplete="off">
-                    <button type="submit" class="btn btn-primary px-4">Enviar</button>
+                    <input type="text" id="msgInput" class="form-control rounded-pill border-2 px-4 py-2" placeholder="Digite sua mensagem técnica..." required autocomplete="off">
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold">ENVIAR</button>
                 </form>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+    .chat-card { border-radius: 15px; }
+    .chat-container { scroll-behavior: smooth; display: flex; flex-direction: column; gap: 15px; }
+    
+    .message { display: flex; align-items: flex-end; gap: 10px; max-width: 80%; }
+    .message.sent { align-self: flex-end; flex-direction: row-reverse; }
+    .message.received { align-self: flex-start; }
+
+    .avatar { width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 2px solid white; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    
+    .bubble { padding: 12px 18px; border-radius: 18px; position: relative; box-shadow: 0 2px 2px rgba(0,0,0,0.05); }
+    .message.sent .bubble { background: var(--senai-red); color: white; border-bottom-right-radius: 4px; }
+    .message.received .bubble { background: white; color: #333; border-bottom-left-radius: 4px; border: 1px solid #eee; }
+
+    .msg-meta { font-size: 0.65rem; color: #aaa; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .message.sent .msg-meta { text-align: right; color: rgba(255,255,255,0.7); }
+    
+    .loading-spinner { opacity: 0.5; font-size: 0.8rem; text-align: center; }
+
+    /* Estilo barra de rolagem */
+    .chat-container::-webkit-scrollbar { width: 5px; }
+    .chat-container::-webkit-scrollbar-track { background: #f1f1f1; }
+    .chat-container::-webkit-scrollbar-thumb { background: #ccc; border-radius: 10px; }
+</style>
 
 {% endblock %}
 
@@ -36,44 +58,60 @@
 const chatBox = document.getElementById('chatBox');
 const chatForm = document.getElementById('chatForm');
 const msgInput = document.getElementById('msgInput');
+let lastMessageCount = 0;
 
-// Auto scroll to bottom
-chatBox.scrollTop = chatBox.scrollHeight;
+async function loadMessages() {
+    try {
+        const res = await fetch("{{ url_for('api_chat', sala_id=sala.id) }}");
+        const messages = await res.json();
+        
+        if (messages.length === lastMessageCount) return;
+        
+        chatBox.innerHTML = messages.map(m => `
+            <div class="message ${m.meu ? 'sent' : 'received'}">
+                <img src="${m.foto}" class="avatar shadow-sm" alt="${m.usuario}">
+                <div class="bubble-group">
+                    <div class="bubble">
+                        <div class="small fw-bold mb-1 ${m.meu ? 'text-white-50' : 'text-primary'}" style="font-size: 0.6rem;">${m.meu ? 'VOCÊ' : m.usuario}</div>
+                        <div class="msg-text">${m.texto}</div>
+                    </div>
+                    <div class="msg-meta">${m.data}</div>
+                </div>
+            </div>
+        `).join('');
+        
+        chatBox.scrollTop = chatBox.scrollHeight;
+        lastMessageCount = messages.length;
+    } catch (err) {
+        console.error("Erro ao carregar chat:", err);
+    }
+}
 
 chatForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const text = msgInput.value;
+    const text = msgInput.value.trim();
     if (!text) return;
-    
-    // Post message
-    const formData = new FormData();
-    formData.append('texto', text);
     
     msgInput.value = '';
     
-    await fetch("{{ url_for('chat', sala_id=sala.id) }}", {
-        method: 'POST',
-        body: formData
-    });
+    const formData = new FormData();
+    formData.append('texto', text);
     
-    loadMessages();
+    try {
+        await fetch("{{ url_for('chat', sala_id=sala.id) }}", {
+            method: 'POST',
+            body: formData
+        });
+        loadMessages();
+    } catch (err) {
+        alert("Erro ao enviar mensagem.");
+    }
 });
 
-async function loadMessages() {
-    const res = await fetch("{{ url_for('api_chat', sala_id=sala.id) }}");
-    const messages = await res.json();
-    
-    chatBox.innerHTML = messages.map(m => `
-        <div class="message ${m.meu ? 'sent' : 'received'}">
-            <div class="msg-meta fw-bold">${m.meu ? 'Você' : m.usuario} • ${m.data}</div>
-            <div class="msg-text">${m.texto}</div>
-        </div>
-    `).join('');
-    
-    chatBox.scrollTop = chatBox.scrollHeight;
-}
+// Primeira carga
+loadMessages();
 
-// Poll every 3 seconds
+// Polling a cada 3 segundos
 setInterval(loadMessages, 3000);
 </script>
 {% endblock %}
