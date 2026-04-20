@@ -190,9 +190,13 @@ def admin_importar_excel():
         return redirect(url_for('admin_patrimonios'))
     
     file = request.files['file']
-    if file.filename == '':
-        flash('Nenhum arquivo selecionado', 'danger')
+    sala_id = request.form.get('sala_id')
+    
+    if not sala_id:
+        flash('Selecione uma sala de destino.', 'danger')
         return redirect(url_for('admin_patrimonios'))
+        
+    sala_destino = Sala.query.filter_by(id=sala_id, escola_id=current_user.escola_id).first_or_404()
 
     try:
         wb = openpyxl.load_workbook(file)
@@ -200,9 +204,6 @@ def admin_importar_excel():
         e_id = current_user.escola_id
         count = 0
         
-        # Mapeamento de colunas (Ignora a primeira linha de cabeçalho)
-        # Assume: A: Patrimonio, B: Descricao, C: Marca, D: Modelo, E: Sala, F: Foto
-        # Ou busca pelo nome na primeira linha
         headers = [str(cell.value).strip() if cell.value else "" for cell in sheet[1]]
         
         def get_val(row, col_name):
@@ -213,22 +214,14 @@ def admin_importar_excel():
                 return ""
 
         for row in sheet.iter_rows(min_row=2):
-            if not row[0].value: continue # Pula linhas vazias
+            if not row[0].value: continue 
             
-            # Buscar valor por nome de coluna ou posição
             pat_num = get_val(row, "Patrimonio") or str(row[0].value)
             desc = get_val(row, "Descricao") or str(row[1].value)
             marca = get_val(row, "Marca") or (str(row[2].value) if len(row) > 2 else "")
             modelo = get_val(row, "Modelo") or (str(row[3].value) if len(row) > 3 else "")
-            sala_nome = get_val(row, "Sala") or (str(row[4].value) if len(row) > 4 else "Geral")
+            # sala_nome = get_val(row, "Sala") # IGNORADO EM FAVOR DA SELEÇÃO DO UI
             foto_url = get_val(row, "Foto") or (str(row[5].value) if len(row) > 5 else "")
-            
-            # Buscar ou criar sala
-            sala = Sala.query.filter_by(nome=sala_nome, escola_id=e_id).first()
-            if not sala:
-                sala = Sala(nome=sala_nome, bloco='-', escola_id=e_id)
-                db.session.add(sala)
-                db.session.commit()
             
             # Evitar duplicados por número
             existente = Patrimonio.query.filter_by(numero_patrimonio=pat_num, escola_id=e_id).first()
@@ -239,7 +232,7 @@ def admin_importar_excel():
                     marca=marca,
                     modelo=modelo,
                     imagem_url=foto_url,
-                    sala_id=sala.id,
+                    sala_id=sala_destino.id,
                     escola_id=e_id
                 )
                 db.session.add(novo_pat)

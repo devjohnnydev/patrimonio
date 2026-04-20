@@ -7,9 +7,16 @@
         <p class="text-muted small">Cadastro geral de bens da unidade</p>
     </div>
     <div class="d-flex gap-2">
-        <form action="{{ url_for('admin_importar_excel') }}" method="POST" enctype="multipart/form-data" class="d-flex gap-2 align-items-center">
+        <form action="{{ url_for('admin_importar_excel') }}" method="POST" enctype="multipart/form-data" class="d-flex gap-2 align-items-center bg-light p-2 rounded shadow-sm border">
+            <div class="small fw-bold text-muted text-uppercase" style="font-size: 0.6rem;">Destino:</div>
+            <select name="sala_id" class="form-select form-select-sm" style="width: 150px;" required>
+                <option value="">Selecione a Sala...</option>
+                {% for s in salas %}
+                <option value="{{ s.id }}">{{ s.nome }}</option>
+                {% endfor %}
+            </select>
             <input type="file" name="file" class="form-control form-control-sm" accept=".xlsx, .xls" required style="width: auto;">
-            <button type="submit" class="btn btn-outline-dark btn-sm fw-bold">IMPORTAR EXCEL</button>
+            <button type="submit" class="btn btn-dark btn-sm fw-bold">IMPORTAR EXCEL</button>
         </form>
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#novoPatMod">Cadastrar Novo Item</button>
     </div>
