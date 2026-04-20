@@ -69,6 +69,7 @@ class Inventario(db.Model):
     data_hora_inicio = db.Column(db.DateTime, default=datetime.utcnow)
     data_hora_fim = db.Column(db.DateTime)
     status = db.Column(db.String(20), default='iniciado')
+    assinatura_base64 = db.Column(db.Text) # Desenho da assinatura manuscrita
 
     sala = db.relationship('Sala', backref='inventarios')
     responsavel = db.relationship('User', backref='inventarios')
@@ -80,6 +81,7 @@ class ItemInventario(db.Model):
     sala_id_da_vez = db.Column(db.Integer, db.ForeignKey('sala.id'))
     status = db.Column(db.String(30)) # 'confirmado', 'alterado', 'fora_de_lugar', 'nao_encontrado'
     status_conservacao_visto = db.Column(db.String(20))
+    foto_validacao_url = db.Column(db.String(500)) # Foto tirada no balanço
     observacao = db.Column(db.Text)
 
 class SolicitacaoRealocacao(db.Model):

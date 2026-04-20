@@ -7,230 +7,227 @@
     <p class="text-muted small">Escola: {{ current_user.escola.nome }}</p>
 </div>
 
+<!-- Painel de Contagem (Resumo por Categoria) -->
+<div class="row g-2 mb-4" id="categoryStats">
+    {# Este painel será atualizado via JS #}
+</div>
+
 <!-- Scanner Mobile -->
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card p-3 border-danger shadow-sm">
-            <div id="reader" style="width: 100%; max-width: 600px; margin: 0 auto;" class="d-none"></div>
-            <div class="text-center mt-2">
-                <button id="toggleScanner" class="btn btn-dark w-100 py-3 fw-bold">
-                    <span class="me-2">📷</span> ABRIR CÂMERA PARA SCANNER
-                </button>
-            </div>
+<div class="card mb-4 border-0 shadow-sm overflow-hidden">
+    <div class="card-header bg-dark text-white text-center py-3">
+        <h6 class="mb-0 small fw-bold"><i class="me-2">📷</i> SCANNER DE PATRIMÔNIO</h6>
+    </div>
+    <div class="card-body p-0">
+        <div id="reader" style="width: 100%; border: none;"></div>
+        <div class="p-3 bg-light text-center">
+            <button class="btn btn-dark w-100 fw-bold" onclick="startScanner()">INICIAR CÂMERA</button>
+            <div class="mt-2 small text-muted">Aponte para o QR Code ou Etiqueta</div>
         </div>
     </div>
 </div>
 
-<div class="row g-4">
-    <!-- Registro -->
-    <div class="col-md-5">
-        <div class="card p-4 h-100 border-top-0 border-start-0 border-end-0 border-bottom-3 border-danger shadow-sm">
-            <h5 class="fw-bold mb-3 text-uppercase small">Registrar Item</h5>
-            <p class="text-muted small mb-4">Insira o número de inventário colado no bem para validar sua presença.</p>
-            
-            <form id="scanForm">
-                <input type="hidden" name="sala_id" value="{{ sala.id }}">
-                <input type="hidden" name="inventario_id" value="{{ inventario.id }}">
-                <div class="mb-3">
-                    <input type="text" name="numero" id="patInput" class="form-control form-control-lg text-center font-monospace" placeholder="999999" autofocus required>
+<!-- Itens Localizados -->
+<div class="card p-4 shadow-sm mb-4">
+    <h5 class="fw-bold mb-3 text-uppercase small">Itens Localizados nesta Sala (<span id="countFound">0</span>)</h5>
+    <div class="list-group list-group-flush" id="itemsList">
+        {# Itens confirmados aparecerão aqui #}
+        <div class="text-center py-4 text-muted small" id="emptyMsg">
+            Nenhum item escaneado ainda.
+        </div>
+    </div>
+</div>
+
+<div class="mb-5">
+    <button class="btn btn-success w-100 py-3 fw-bold shadow-lg" onclick="prepararAssinatura()">
+        FINALIZAR E ASSINAR BALANÇO
+    </button>
+</div>
+
+<!-- Modal Assinatura -->
+<div class="modal fade" id="assinaturaModal" tabindex="-1">
+    <div class="modal-dialog modal-fullscreen-sm-down">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-dark text-white rounded-0">
+                <h5 class="modal-title small fw-bold">ASSINATURA DO RESPONSÁVEL</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <p class="small text-muted mb-3">Desenhe sua assinatura no quadro abaixo:</p>
+                <div class="signature-wrapper border bg-light mb-3" style="touch-action: none;">
+                    <canvas id="signature-pad" class="signature-pad" width="400" height="200" style="width: 100%; max-width: 400px; height: 200px;"></canvas>
                 </div>
-                <button type="submit" class="btn btn-primary w-100 py-3 fw-bold">VALIDAR PRESENÇA</button>
-            </form>
-
-            <div id="scanResult" class="mt-4 fade-in d-none">
-                <!-- Injected result -->
-            </div>
-            
-            <div class="mt-auto pt-4 border-top border-light">
-                <a href="{{ url_for('finalizar_inventario', inv_id=inventario.id) }}" class="btn btn-outline-success w-100 fw-bold mb-2" onclick="return confirm('Deseja finalizar o inventário e enviar para validação?')">FINALIZAR CONTAGEM</a>
-                <a href="{{ url_for('chat', sala_id=sala.id) }}" class="btn btn-outline-secondary w-100 btn-sm fw-bold">⚠️ REPORTAR DIVERGÊNCIA AO ADM</a>
-            </div>
-        </div>
-    </div>
-
-    <!-- Lista -->
-    <div class="col-md-7">
-        <div class="card p-4 h-100">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h5 class="fw-bold mb-0 text-uppercase small">Itens Esperados no Ambiente</h5>
-                <span class="badge bg-secondary rounded-0">{{ itens_esperados|length }} bens</span>
-            </div>
-            
-            <div class="table-responsive">
-                <table class="table table-hover align-middle table-sm border-0">
-                    <thead class="text-muted">
-                        <tr>
-                            <th>Bem</th>
-                            <th>Status</th>
-                        </tr>
-                    </thead>
-                    <tbody id="itemsTable">
-                        {% for item in itens_esperados %}
-                        <tr id="row-{{ item.id }}" class="{{ 'opacity-50' if item.id in conferidos_ids else '' }}">
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <img src="{{ item.imagem_url or 'https://via.placeholder.com/60?text=Sem+Foto' }}" class="asset-img me-2" alt="">
-                                    <div>
-                                        <div class="font-monospace fw-bold text-danger">{{ item.numero_patrimonio }}</div>
-                                        <div class="small">{{ item.descricao }}</div>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                {% if item.id in conferidos_ids %}
-                                <span class="badge bg-success text-uppercase" style="font-size: 0.6rem;">Check OK</span>
-                                {% else %}
-                                <span class="badge bg-light text-dark text-uppercase border" style="font-size: 0.6rem;">Pendente</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                <button class="btn btn-outline-secondary btn-sm mb-4" onclick="signaturePad.clear()">Limpar Quadro</button>
+                
+                <form action="{{ url_for('inventario_assinar', inv_id=inventario.id) }}" method="POST" onsubmit="return submitFinal()">
+                    <input type="hidden" name="assinatura_base64" id="assinatura_input">
+                    <div class="alert alert-warning small text-start mb-4">
+                        <strong>Aviso:</strong> Ao assinar, você confirma que a contagem física reflete fielmente o estado do ambiente.
+                    </div>
+                    <button type="submit" class="btn btn-success w-100 py-2 fw-bold text-uppercase">Enviar Balanço Final para o Admin</button>
+                </form>
             </div>
         </div>
     </div>
 </div>
 
-{% endblock %}
-
-{% block scripts %}
-<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+<!-- Scripts -->
+<script src="https://unpkg.com/html5-qrcode"></script>
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.0.0/dist/signature_pad.umd.min.js"></script>
 <script>
-const reader = document.getElementById('reader');
-const toggleBtn = document.getElementById('toggleScanner');
-let html5QrCode;
+    let scanner = null;
+    let signaturePad = null;
+    let totalItems = {{ itens_esperados|length }};
+    let foundItems = [];
+    const expectedItems = {{ itens_esperados|tojson }};
 
-toggleBtn.addEventListener('click', () => {
-    if (reader.classList.contains('d-none')) {
-        reader.classList.remove('d-none');
-        toggleBtn.innerText = "PARAR SCANNER";
-        startScanner();
-    } else {
-        stopScanner();
-        reader.classList.add('d-none');
-        toggleBtn.innerText = "ABRIR CÂMERA PARA SCANNER";
+    // Inicializa Dashboard de Categorias
+    function updateStats() {
+        const statsDiv = document.getElementById('categoryStats');
+        const counts = {};
+        
+        // Agrupa esperados por descrição (ex: Cadeira)
+        expectedItems.forEach(item => {
+            const cat = item.descricao.split(' ')[0]; // Pega primeira palavra
+            if (!counts[cat]) counts[cat] = { expected: 0, found: 0 };
+            counts[cat].expected++;
+        });
+
+        // Conta quantos foram achados
+        foundItems.forEach(item => {
+            const cat = item.descricao.split(' ')[0];
+            if (counts[cat]) counts[cat].found++;
+        });
+
+        statsDiv.innerHTML = Object.keys(counts).map(cat => `
+            <div class="col-6 col-md-3">
+                <div class="card p-2 text-center border-0 shadow-sm ${counts[cat].found >= counts[cat].expected ? 'bg-success text-white' : 'bg-white'}">
+                    <div class="small fw-bold text-uppercase" style="font-size: 0.6rem;">${cat}</div>
+                    <div class="fw-bold">${counts[cat].found}/${counts[cat].expected}</div>
+                </div>
+            </div>
+        `).join('');
+        
+        document.getElementById('countFound').innerText = foundItems.length;
     }
-});
 
-function startScanner() {
-    html5QrCode = new Html5Qrcode("reader");
-    html5QrCode.start(
-        { facingMode: "environment" }, 
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        (decodedText, decodedResult) => {
-            document.getElementById('patInput').value = decodedText;
-            stopScanner();
-            reader.classList.add('d-none');
-            toggleBtn.innerText = "ABRIR CÂMERA PARA SCANNER";
-            document.getElementById('scanForm').dispatchEvent(new Event('submit'));
-        },
-        (errorMessage) => { /* Ignore many errors */ }
-    ).catch((err) => console.error(err));
-}
-
-function stopScanner() {
-    if (html5QrCode) {
-        html5QrCode.stop().then(() => html5QrCode.clear());
+    function startScanner() {
+        if (scanner) return;
+        scanner = new Html5Qrcode("reader");
+        scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, onScanSuccess);
     }
-}
 
-document.getElementById('scanForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const resultDiv = document.getElementById('scanResult');
-    const patInput = document.getElementById('patInput');
-    
-    resultDiv.classList.add('d-none');
-    
-    try {
-        const response = await fetch("{{ url_for('inventario_scan') }}", {
+    function onScanSuccess(decodedText) {
+        // Envia para o servidor
+        const formData = new FormData();
+        formData.append('numero', decodedText);
+        
+        fetch("{{ url_for('inventario_registrar_scan', inv_id=inventario.id) }}", {
             method: 'POST',
             body: formData
-        });
-        const data = await response.json();
-        
-        resultDiv.classList.remove('d-none');
-        
-        if (data.status === 'ok') {
-            resultDiv.innerHTML = `
-                <div class="card p-3 border-success bg-success bg-opacity-10">
-                    <div class="d-flex align-items-center">
-                        <img src="${data.imagem || 'https://via.placeholder.com/60'}" class="asset-img me-3">
-                        <div class="flex-grow-1">
-                            <div class="fw-bold text-success text-uppercase small">Item Validado</div>
-                            <div class="small">${data.message}</div>
-                        </div>
-                    </div>
-                    <button class="btn btn-warning btn-sm mt-3 fw-bold w-100" onclick="marcarQuebrado(${data.pat_id || 0})">ITEM ESTÁ QUEBRADO?</button>
-                </div>`;
-            patInput.value = '';
-            
-            // Atualizar tabela sem reload (Check Automático)
-            const row = document.getElementById(`row-${data.pat_id}`);
-            if (row) {
-                row.classList.add('opacity-50', 'bg-success', 'bg-opacity-10');
-                const badge = row.querySelector('.badge');
-                if (badge) {
-                    badge.className = 'badge bg-success text-uppercase';
-                    badge.innerText = 'Check OK';
-                }
-            }
-            
-            // Opcional: Recarregar após 3 segundos apenas para sincronizar tudo
-            // setTimeout(() => location.reload(), 3000);
-        } else if (data.status === 'not_found') {
-            resultDiv.innerHTML = `
-                <div class="alert alert-danger rounded-0 small fw-bold">ITEM NÃO ENCONTRADO NO SISTEMA</div>`;
-        } else if (data.status === 'wrong_room') {
-            resultDiv.innerHTML = `
-                <div class="card p-3 border-warning bg-warning bg-opacity-10">
-                    <div class="d-flex align-items-center mb-3">
-                        <img src="${data.imagem || 'https://via.placeholder.com/60'}" class="asset-img me-3">
-                        <div class="flex-grow-1">
-                            <div class="fw-bold text-warning text-uppercase small">Localização Divergente</div>
-                            <div class="small">Este item pertence à: <strong>${data.sala_atual}</strong></div>
-                        </div>
-                    </div>
-                    <button class="btn btn-danger btn-sm w-100 fw-bold rounded-0" onclick="solicitarRelocacao(${data.pat_id}, ${formData.get('sala_id')}, ${formData.get('inventario_id')})">SOLICITAR MUDANÇA PARA ESTE LOCAL</button>
-                </div>`;
-        }
-    } catch (err) {
-        console.error(err);
-    }
-});
-
-async function marcarQuebrado(patId) {
-    if (!patId) {
-        // Find patId from recent scan logic check or wait for user to re-scan
-        alert("Escaneie o item primeiro para marcá-lo como quebrado.");
-        return;
-    }
-    if (!confirm("Marcar este item como DANIFICADO para avaliação de descarte?")) return;
-    
-    await fetch("{{ url_for('marcar_quebrado') }}", {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ pat_id: patId })
-    });
-    alert("Dano reportado à administração.");
-    location.reload();
-}
-
-async function solicitarRelocacao(patId, salaDestino, invId) {
-    const res = await fetch("{{ url_for('solicitar_relocacao') }}", {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-            pat_id: patId,
-            sala_destino_id: salaDestino,
-            inv_id: invId
         })
-    });
-    if (res.ok) {
-        alert("Solicitação de mudança enviada!");
-        location.reload();
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'sucesso') {
+                addItemToList(data);
+                alert(data.msg);
+                scanner.pause(); // Pausa para forçar a foto
+            } else {
+                alert(data.msg);
+            }
+        });
     }
-}
+
+    function addItemToList(item) {
+        const list = document.getElementById('itemsList');
+        document.getElementById('emptyMsg').style.display = 'none';
+        
+        foundItems.push(item);
+        
+        const div = document.createElement('div');
+        div.className = 'list-group-item d-flex justify-content-between align-items-center py-3';
+        div.id = `item-row-${item.id}`;
+        div.innerHTML = `
+            <div>
+                <div class="small fw-bold text-danger">Patrimônio ${item.id}</div>
+                <div class="fw-bold">${item.descricao}</div>
+                <div id="photo-status-${item.id}" class="small text-muted mt-1 italic">
+                    🔴 FOTO OBRIGATÓRIA PENDENTE
+                </div>
+            </div>
+            <div class="text-end">
+                <button class="btn btn-outline-dark btn-sm fw-bold mb-1" id="btn-foto-${item.id}" onclick="triggerPhoto(${item.id})">TIRAR FOTO</button>
+            </div>
+        `;
+        list.prepend(div);
+        updateStats();
+    }
+
+    function triggerPhoto(itemId) {
+        // Mock de upload de foto (em produção usaria um input file type camera)
+        // Para demonstração, vamos simular que a foto foi tirada
+        const dummyPhotoUrl = `https://images.unsplash.com/photo-1541013726909-002d99d3e55c?q=80&w=200&auto=format&fit=crop`;
+        
+        const formData = new FormData();
+        formData.append('foto_url', dummyPhotoUrl);
+        
+        fetch(`/inventario/item/foto/${itemId}`, {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'ok') {
+                document.getElementById(`photo-status-${itemId}`).innerHTML = '✅ FOTO CAPTURADA';
+                document.getElementById(`photo-status-${itemId}`).className = 'small text-success mt-1 fw-bold';
+                document.getElementById(`btn-foto-${itemId}`).innerText = "MODIFICAR FOTO";
+                itemHasPhoto(itemId);
+                if (scanner) scanner.resume();
+            }
+        });
+    }
+
+    const itemsWithPhotos = new Set();
+    function itemHasPhoto(id) {
+        itemsWithPhotos.add(id);
+    }
+
+    function prepararAssinatura() {
+        // Validação de fotos
+        const missing = foundItems.filter(item => !itemsWithPhotos.has(item.id));
+        if (missing.length > 0) {
+            alert("Atenção: É obrigatório tirar a foto de TODOS os itens localizados antes de assinar.");
+            return;
+        }
+
+        const modal = new bootstrap.Modal(document.getElementById('assinaturaModal'));
+        modal.show();
+        
+        // Inicializa o pad se ainda não foi
+        setTimeout(() => {
+            const canvas = document.getElementById('signature-pad');
+            signaturePad = new SignaturePad(canvas);
+        }, 500);
+    }
+
+    function submitFinal() {
+        if (signaturePad.isEmpty()) {
+            alert("Por favor, forneça sua assinatura manuscrita.");
+            return false;
+        }
+        document.getElementById('assinatura_input').value = signaturePad.toDataURL();
+        return true;
+    }
+
+    // Inicializa
+    window.onload = updateStats;
 </script>
+
+<style>
+.signature-wrapper {
+    background: #f8f9fa;
+    border-radius: 4px;
+    display: inline-block;
+}
+.italic { font-style: italic; }
+</style>
 {% endblock %}

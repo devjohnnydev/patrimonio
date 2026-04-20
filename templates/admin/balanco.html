@@ -88,7 +88,15 @@
                             {% for r in fora_de_lugar %}
                             <tr>
                                 <td class="font-monospace fw-bold">{{ r.patrimonio.numero_patrimonio }}</td>
-                                <td>{{ r.patrimonio.descricao }}</td>
+                                <td>
+                                    {{ r.patrimonio.descricao }}
+                                    {% if r.foto_validacao_url %}
+                                    <div class="mt-2">
+                                        <img src="{{ r.foto_validacao_url }}" class="rounded shadow-sm" style="width: 120px; height: 80px; object-fit: cover;" alt="Evidência">
+                                        <div class="small text-success fw-bold" style="font-size: 0.6rem;">📸 EVIDÊNCIA FOTOGRÁFICA</div>
+                                    </div>
+                                    {% endif %}
+                                </td>
                                 <td>{{ r.patrimonio.sala.nome }}</td>
                                 <td><span class="badge bg-warning">Realocação Solicitada</span></td>
                             </tr>
@@ -98,7 +106,43 @@
                 </div>
             </div>
             {% endif %}
+
+            <!-- Assinatura Digital -->
+            <div class="mt-5 pt-4 border-top">
+                <div class="row align-items-center">
+                    <div class="col-md-6">
+                        <div class="small text-muted text-uppercase fw-bold mb-2">Assinatura do Responsável (Manuscrita Digital)</div>
+                        {% if inv.assinatura_base64 %}
+                        <div class="bg-light p-2 d-inline-block border">
+                            <img src="{{ inv.assinatura_base64 }}" style="max-width: 300px; height: auto;" alt="Assinatura">
+                        </div>
+                        {% else %}
+                        <p class="text-danger small italic">Sem assinatura registrada.</p>
+                        {% endif %}
+                        <div class="mt-2 fw-bold text-uppercase" style="font-size: 0.9rem;">{{ inv.responsavel.nome }}</div>
+                        <div class="small text-muted">{{ inv.responsavel.role|capitalize }} - Unidade {{ inv.escola.nome }}</div>
+                    </div>
+                </div>
+            </div>
             
+            {% if confirmados %}
+            <div class="mt-5">
+                <h6 class="text-success fw-bold text-uppercase small mb-3">Evidências dos Itens Confirmados</h6>
+                <div class="row g-2">
+                    {% for c in confirmados %}
+                        {% if c.foto_validacao_url %}
+                        <div class="col-3 col-md-2">
+                            <div class="card p-1 text-center">
+                                <img src="{{ c.foto_validacao_url }}" class="img-fluid rounded mb-1" style="height: 60px; object-fit: cover;">
+                                <div class="font-monospace fw-bold" style="font-size: 0.5rem;">#{{ c.patrimonio.numero_patrimonio }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
             {% if not faltantes and not fora_de_lugar and not nao_encontrados %}
             <div class="alert alert-success text-center py-5">
                 <h4 class="fw-bold">Balanço 100% Conciliado!</h4>

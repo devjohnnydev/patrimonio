@@ -244,6 +244,7 @@ def admin_salas():
             nome=request.form.get('nome'),
             bloco=request.form.get('bloco'),
             descricao=request.form.get('descricao'),
+            imagem_url=request.form.get('imagem_url'),
             escola_id=e_id
         )
         # Vincular Professor(es) se selecionado
@@ -259,6 +260,28 @@ def admin_salas():
     salas = Sala.query.filter_by(escola_id=e_id).all()
     professores = User.query.filter_by(role='professor', escola_id=e_id).all()
     return render_template('admin/salas.html', salas=salas, professores=professores)
+
+@app.route('/admin/salas/editar/<int:id>', methods=['POST'])
+@login_required
+def admin_editar_sala(id):
+    if current_user.role not in ['admin', 'coordenador']: return redirect(url_for('index'))
+    sala = Sala.query.filter_by(id=id, escola_id=current_user.escola_id).first_or_404()
+    
+    sala.nome = request.form.get('nome')
+    sala.bloco = request.form.get('bloco')
+    sala.descricao = request.form.get('descricao')
+    sala.imagem_url = request.form.get('imagem_url')
+    
+    # Atualizar Professor Responsável
+    sala.responsaveis = []
+    prof_ids = request.form.getlist('professor_ids')
+    for pid in prof_ids:
+        u = User.query.filter_by(id=pid, escola_id=current_user.escola_id).first()
+        if u: sala.responsaveis.append(u)
+        
+    db.session.commit()
+    flash('Ambiente atualizado!', 'success')
+    return redirect(url_for('admin_salas'))
 
 # CRUD Patrimonio
 @app.route('/admin/patrimonios', methods=['GET', 'POST'])
@@ -406,30 +429,52 @@ def inventario_sala(sala_id):
     
     return render_template('inventario.html', sala=sala, inventario=inv, itens_esperados=itens_esperados, conferidos_ids=conferidos_ids)
 
-@app.route('/inventario/scan', methods=['POST'])
+# Registro de Ações de Balanço
+@app.route('/inventario/item/foto/<int:item_id>', methods=['POST'])
 @login_required
-def inventario_scan():
-    numero = request.form.get('numero')
-    sala_id = request.form.get('sala_id')
-    inv_id = request.form.get('inventario_id')
-    e_id = current_user.escola_id
+def inventario_item_foto(item_id):
+    item = ItemInventario.query.get_or_404(item_id)
+    # Segurança: Verificar se pertence à escola
+    if item.inventario.escola_id != current_user.escola_id: return "Erro", 403
     
-    pat = Patrimonio.query.filter_by(numero_patrimonio=numero, escola_id=e_id).first()
+    foto_url = request.form.get('foto_url')
+    if foto_url:
+        item.foto_validacao_url = foto_url
+        db.session.commit()
+        return jsonify({"status": "ok"})
+    return jsonify({"status": "erro"}), 400
+
+@app.route('/inventario/assinar/<int:inv_id>', methods=['POST'])
+@login_required
+def inventario_assinar(inv_id):
+    inv = Inventario.query.filter_by(id=inv_id, escola_id=current_user.escola_id).first_or_404()
+    assinatura = request.form.get('assinatura_base64')
+    
+    if assinatura:
+        inv.assinatura_base64 = assinatura
+        inv.status = 'concluido'
+        inv.data_hora_fim = datetime.utcnow()
+        db.session.commit()
+        flash('Balanço assinado e enviado com sucesso!', 'success')
+        return redirect(url_for('professor_dashboard'))
+    
+    flash('Assinatura é obrigatória para finalizar.', 'danger')
+    return redirect(url_for('inventario_sala', sala_id=inv.sala_id))
+
+# Registro de Scan (AJAX) com verificação de local
+@app.route('/inventario/scan/<int:inv_id>', methods=['POST'])
+@login_required
+def inventario_registrar_scan(inv_id):
+    inv = Inventario.query.filter_by(id=inv_id, escola_id=current_user.escola_id).first_or_404()
+    numero = request.form.get('numero')
+    sala_id = inv.sala_id
+    
+    pat = Patrimonio.query.filter_by(numero_patrimonio=numero, escola_id=current_user.escola_id).first()
     
     if not pat:
         item_inv = ItemInventario(inventario_id=inv_id, status='nao_encontrado', observacao=f'Tag {numero} não cadastrada.')
         db.session.add(item_inv)
         db.session.commit()
-        return jsonify({'status': 'not_found', 'message': 'Patrimônio não localizado no sistema.'})
-    
-    if str(pat.sala_id) == str(sala_id):
-        existente = ItemInventario.query.filter_by(inventario_id=inv_id, patrimonio_id=pat.id).first()
-        if not existente:
-            item_inv = ItemInventario(inventario_id=inv_id, patrimonio_id=pat.id, sala_id_da_vez=sala_id, status='confirmado')
-            db.session.add(item_inv)
-            db.session.commit()
-        return jsonify({'status': 'ok', 'message': f'Item confirmado: {pat.descricao}', 'imagem': pat.imagem_url})
-    else:
         return jsonify({
             'status': 'wrong_room', 
             'pat_id': pat.id,
