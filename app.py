@@ -421,8 +421,16 @@ def seed():
 
 # Criar tabelas e rodar seed
 with app.app_context():
-    db.create_all()
-    seed()
+    try:
+        # Verifica se o esquema está íntegro tentando uma consulta
+        Escola.query.first()
+        print("Esquema do banco de dados verificado e íntegro.")
+    except Exception as e:
+        print(f"Erro de esquema detectado ({e}). Recriando tabelas...")
+        db.drop_all()
+        db.create_all()
+        seed()
+        print("Banco de dados recriado com sucesso.")
 
 if __name__ == '__main__':
     app.run(debug=True)
