@@ -112,6 +112,9 @@ def admin_dashboard():
         filter(User.escola_id == e_id).\
         group_by(User.nome).all()
 
+    salas = Sala.query.filter_by(escola_id=e_id).all()
+    relocacoes = SolicitacaoRealocacao.query.filter_by(escola_id=e_id, status='pendente').all()
+    quebrados = Patrimonio.query.filter_by(escola_id=e_id, status_conservacao='quebrado').all()
     inventarios_concluidos = Inventario.query.filter_by(escola_id=e_id, status='concluido').all()
     
     return render_template('admin/dashboard.html', 
