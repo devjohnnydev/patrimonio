@@ -75,6 +75,7 @@ class Inventario(db.Model):
 
     sala = db.relationship('Sala', backref='inventarios')
     responsavel = db.relationship('User', backref='inventarios')
+    escola = db.relationship('Escola', backref='inventarios')
 
 class ItemInventario(db.Model):
     id = db.Column(db.Integer, primary_key=True)
