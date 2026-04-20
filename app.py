@@ -51,6 +51,9 @@ def status_badge(status):
     }
     return badges.get(status, 'primary')
 
+import os
+from werkzeug.utils import secure_filename
+
 # --- Perfil e Identidade ---
 @app.route('/perfil', methods=['GET', 'POST'])
 @login_required
@@ -65,12 +68,13 @@ def perfil():
         if 'foto_file' in request.files:
             file = request.files['foto_file']
             if file and file.filename != '':
-                import os
-                from werkzeug.utils import secure_filename
                 filename = secure_filename(f"user_{current_user.id}_{file.filename}")
-                upload_path = os.path.join('static/uploads/perfil', filename)
-                file.save(os.path.join(app.root_path, upload_path))
-                current_user.foto_url = '/' + upload_path
+                upload_dir = os.path.join(app.root_path, 'static/uploads/perfil')
+                os.makedirs(upload_dir, exist_ok=True)
+                
+                full_path = os.path.join(upload_dir, filename)
+                file.save(full_path)
+                current_user.foto_url = f"/static/uploads/perfil/{filename}"
             
         db.session.commit()
         flash('Perfil atualizado com sucesso!', 'success')
