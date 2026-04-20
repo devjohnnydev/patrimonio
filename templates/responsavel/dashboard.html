@@ -9,17 +9,23 @@
 <div class="row g-4">
     {% for sala in salas %}
     <div class="col-md-4">
-        <div class="card h-100 p-4 ripple-card">
-            <div class="d-flex justify-content-between align-items-start mb-3">
-                <span class="badge bg-primary px-3 py-2">{{ sala.bloco }}</span>
-                <i class="opacity-50">#{{ sala.id }}</i>
-            </div>
-            <h4 class="fw-bold mb-2">{{ sala.nome }}</h4>
-            <p class="text-muted small mb-4">{{ sala.descricao or 'Sem descrição.' }}</p>
-            
-            <div class="mt-auto d-flex gap-2">
-                <a href="{{ url_for('inventario_sala', sala_id=sala.id) }}" class="btn btn-primary flex-grow-1">Iniciar Inventário</a>
-                <a href="{{ url_for('chat', sala_id=sala.id) }}" class="btn btn-outline-light">Chat</a>
+        <div class="card h-100 p-0 ripple-card overflow-hidden">
+            <img src="{{ sala.imagem_url or 'https://images.unsplash.com/photo-1568992687345-26948fad3105?q=80&w=400&auto=format&fit=crop' }}" class="card-img-top" style="height: 160px; object-fit: cover;" alt="">
+            <div class="p-4 d-flex flex-column h-100">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <span class="badge bg-danger px-3 py-2 fw-bold">{{ sala.bloco }}</span>
+                    <i class="opacity-50 small text-muted">ID #{{ sala.id }}</i>
+                </div>
+                <h4 class="fw-bold mb-2">{{ sala.nome }}</h4>
+                <p class="text-muted small mb-4">{{ sala.descricao or 'Ambiente designado pronto para conferência.' }}</p>
+                
+                <div class="mt-auto">
+                    <div class="d-flex gap-2 mb-2">
+                        <a href="{{ url_for('inventario_sala', sala_id=sala.id) }}" class="btn btn-primary flex-grow-1 fw-bold">INVENTÁRIO</a>
+                        <a href="{{ url_for('exportar_sala_excel', sala_id=sala.id) }}" class="btn btn-outline-dark" title="Baixar Lista Excel">📥</a>
+                    </div>
+                    <a href="{{ url_for('chat', sala_id=sala.id) }}" class="btn btn-outline-secondary w-100 btn-sm fw-bold">CHAT COM ADMIN</a>
+                </div>
             </div>
         </div>
     </div>

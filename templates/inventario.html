@@ -42,7 +42,8 @@
             </div>
             
             <div class="mt-auto pt-4 border-top border-light">
-                <a href="{{ url_for('finalizar_inventario', inv_id=inventario.id) }}" class="btn btn-outline-success w-100 fw-bold" onclick="return confirm('Deseja finalizar o inventário e enviar para validação?')">FINALIZAR CONTAGEM</a>
+                <a href="{{ url_for('finalizar_inventario', inv_id=inventario.id) }}" class="btn btn-outline-success w-100 fw-bold mb-2" onclick="return confirm('Deseja finalizar o inventário e enviar para validação?')">FINALIZAR CONTAGEM</a>
+                <a href="{{ url_for('chat', sala_id=sala.id) }}" class="btn btn-outline-secondary w-100 btn-sm fw-bold">⚠️ REPORTAR DIVERGÊNCIA AO ADM</a>
             </div>
         </div>
     </div>
@@ -164,7 +165,20 @@ document.getElementById('scanForm').addEventListener('submit', async (e) => {
                     <button class="btn btn-warning btn-sm mt-3 fw-bold w-100" onclick="marcarQuebrado(${data.pat_id || 0})">ITEM ESTÁ QUEBRADO?</button>
                 </div>`;
             patInput.value = '';
-            setTimeout(() => location.reload(), 2000);
+            
+            // Atualizar tabela sem reload (Check Automático)
+            const row = document.getElementById(`row-${data.pat_id}`);
+            if (row) {
+                row.classList.add('opacity-50', 'bg-success', 'bg-opacity-10');
+                const badge = row.querySelector('.badge');
+                if (badge) {
+                    badge.className = 'badge bg-success text-uppercase';
+                    badge.innerText = 'Check OK';
+                }
+            }
+            
+            // Opcional: Recarregar após 3 segundos apenas para sincronizar tudo
+            // setTimeout(() => location.reload(), 3000);
         } else if (data.status === 'not_found') {
             resultDiv.innerHTML = `
                 <div class="alert alert-danger rounded-0 small fw-bold">ITEM NÃO ENCONTRADO NO SISTEMA</div>`;

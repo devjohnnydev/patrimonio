@@ -125,6 +125,41 @@ def admin_dashboard():
                            conservacao_stats=conservacao_stats,
                            produtividade=produtividade)
 
+@app.route('/sala/exportar/<int:sala_id>')
+@login_required
+def exportar_sala_excel(sala_id):
+    sala = Sala.query.get_or_404(sala_id)
+    # Segurança: Verificar se pertence à escola
+    if sala.escola_id != current_user.escola_id:
+        flash('Acesso negado!', 'danger')
+        return redirect(url_for('index'))
+    
+    # Segurança: Se for responsável, verificar se a sala é dele
+    if current_user.role == 'responsavel' and sala not in current_user.salas:
+        flash('Acesso negado!', 'danger')
+        return redirect(url_for('index'))
+
+    from io import BytesIO
+    from flask import send_file
+
+    wb = openpyxl.Workbook()
+    sheet = wb.active
+    sheet.title = "Patrimonios"
+    
+    headers = ["Patrimonio", "Descricao", "Marca", "Modelo", "Status Conservacao"]
+    sheet.append(headers)
+    
+    patrimonios = Patrimonio.query.filter_by(sala_id=sala_id, status='ativo').all()
+    for p in patrimonios:
+        sheet.append([p.numero_patrimonio, p.descricao, p.marca, p.modelo, p.status_conservacao])
+    
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    filename = f"patrimonio_sala_{sala.nome.replace(' ', '_')}.xlsx"
+    return send_file(output, as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
 @app.route('/admin/importar', methods=['POST'])
 @login_required
 def admin_importar_excel():
