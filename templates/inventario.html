@@ -21,7 +21,7 @@
         </div>
         <div class="col-md-6 text-md-end">
             <div class="btn-group w-100">
-                <a href="{{ url_for('admin_baixar_excel', sala_id=sala.id) }}" class="btn btn-outline-dark fw-bold btn-sm">BAIXAR LISTA EXCEL</a>
+                <a href="{{ url_for('exportar_sala_excel', sala_id=sala.id) }}" class="btn btn-outline-dark fw-bold btn-sm">BAIXAR LISTA EXCEL</a>
                 <button class="btn btn-dark fw-bold btn-sm" data-bs-toggle="modal" data-bs-target="#uploadExcelModal">SUBIR PLANILHA</button>
             </div>
         </div>

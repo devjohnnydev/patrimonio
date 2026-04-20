@@ -612,43 +612,32 @@ def inventario_sala(sala_id):
         flash('Acesso negado!', 'danger')
         return redirect(url_for('index'))
     
+    # Buscar inventário de forma limpa e segura
     try:
-        # Tentar buscar inventário com segurança contra falhas de migração no Postgres
-        try:
-            inv = Inventario.query.filter_by(sala_id=sala_id, status='iniciado', escola_id=current_user.escola_id).first()
-        except:
-            # Forçar migração manual via SQL bruto se falhar
-            from sqlalchemy import text
-            with db.engine.connect() as conn:
-                conn.execute(text("ALTER TABLE inventario ADD COLUMN IF NOT EXISTS data_limite TIMESTAMP;"))
-                conn.commit()
-            inv = Inventario.query.filter_by(sala_id=sala_id, status='iniciado', escola_id=current_user.escola_id).first()
+        inv = Inventario.query.filter_by(sala_id=sala_id, status='iniciado', escola_id=current_user.escola_id).first()
+    except:
+        # Recuperação silenciosa se houver falha de esquema
+        from sqlalchemy import text
+        with db.engine.connect() as conn:
+            conn.execute(text("ALTER TABLE inventario ADD COLUMN IF NOT EXISTS data_limite TIMESTAMP;"))
+            conn.commit()
+        inv = Inventario.query.filter_by(sala_id=sala_id, status='iniciado', escola_id=current_user.escola_id).first()
 
-        if not inv:
-            inv = Inventario(sala_id=sala_id, responsavel_id=current_user.id, escola_id=current_user.escola_id)
-            db.session.add(inv)
-            db.session.commit()
-        
-        itens_esperados = Patrimonio.query.filter_by(sala_id=sala_id, status='ativo').all()
-        conferidos_ids = [item.patrimonio_id for item in ItemInventario.query.filter_by(inventario_id=inv.id).all()]
-        
-        # Preparar itens para o JSON com segurança total
-        itens_json = []
-        for p in itens_esperados:
-            itens_json.append({
-                "id": p.id,
-                "numero": str(p.numero_patrimonio),
-                "descricao": str(p.descricao)
-            })
-        
-        return render_template('inventario.html', 
-                               sala=sala, 
-                               inventario=inv, 
-                               itens_esperados=itens_json, 
-                               conferidos_ids=conferidos_ids)
-    except Exception as e:
-        # Se TUDO falhar, mostrar o erro exato na tela para diagnóstico
-        return f"Erro Crítico de Sistema: {str(e)}", 500
+    if not inv:
+        inv = Inventario(sala_id=sala_id, responsavel_id=current_user.id, escola_id=current_user.escola_id)
+        db.session.add(inv)
+        db.session.commit()
+    
+    itens_esperados = Patrimonio.query.filter_by(sala_id=sala_id, status='ativo').all()
+    conferidos_ids = [item.patrimonio_id for item in ItemInventario.query.filter_by(inventario_id=inv.id).all()]
+    
+    itens_json = [{"id": p.id, "numero": str(p.numero_patrimonio), "descricao": str(p.descricao)} for p in itens_esperados]
+    
+    return render_template('inventario.html', 
+                           sala=sala, 
+                           inventario=inv, 
+                           itens_esperados=itens_json, 
+                           conferidos_ids=conferidos_ids)
 
 # Registro de Ações de Balanço
 @app.route('/inventario/item/foto/<int:item_id>', methods=['POST'])
