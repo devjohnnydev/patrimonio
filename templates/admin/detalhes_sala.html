@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb small">
+            <li class="breadcrumb-item"><a href="{{ url_for('admin_dashboard') }}" class="text-decoration-none">Dashboard</a></li>
+            <li class="breadcrumb-item active">Auditoria de Ambiente</li>
+        </ol>
+    </nav>
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h2 class="fw-bold mb-0 text-uppercase">{{ sala.nome }}</h2>
+            <p class="text-muted small">Bloco: <strong>{{ sala.bloco }}</strong> | ID #{{ sala.id }}</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('chat', sala_id=sala.id) }}" class="btn btn-dark btn-sm fw-bold">
+                <i class="bi bi-chat-dots me-1"></i> CHAT DA SALA
+            </a>
+            <a href="{{ url_for('exportar_sala_excel', sala_id=sala.id) }}" class="btn btn-outline-dark btn-sm fw-bold">
+                <i class="bi bi-download me-1"></i> EXPORTAR STATUS
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4 mb-5">
+    <!-- Card de Acurácia -->
+    <div class="col-md-4">
+        <div class="card p-4 h-100 shadow-sm border-0 border-top border-4 border-{{ 'success' if acuracia == 100 else 'primary' }}">
+            <h6 class="text-muted fw-bold text-uppercase small mb-3">Acurácia do Ambiente</h6>
+            <div class="d-flex align-items-end gap-2">
+                <h1 class="fw-bold mb-0">{{ acuracia }}%</h1>
+                <span class="text-muted small pb-2">concluído</span>
+            </div>
+            <div class="progress mt-3" style="height: 10px;">
+                <div class="progress-bar {{ 'bg-success' if acuracia == 100 else 'bg-primary' }} progress-bar-striped progress-bar-animated" 
+                     role="progressbar" style="width: {{ acuracia }}%"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Canal de Responsáveis -->
+    <div class="col-md-8">
+        <div class="card p-4 h-100 shadow-sm">
+            <h6 class="text-muted fw-bold text-uppercase small mb-3">Professores Responsáveis</h6>
+            <div class="d-flex flex-wrap gap-4">
+                {% for resp in sala.responsaveis %}
+                <div class="d-flex align-items-center">
+                    <img src="{{ resp.foto_url or 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + resp.username }}" 
+                         alt="" width="50" height="50" class="rounded-circle me-3 border shadow-sm">
+                    <div>
+                        <div class="fw-bold">{{ resp.nome }}</div>
+                        <div class="text-muted small">{{ resp.email }}</div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="text-muted italic small py-2">Nenhum professor vinculado a esta sala.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabela Mestre de Auditoria -->
+<div class="card shadow-sm border-0 overflow-hidden mb-5">
+    <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+        <h5 class="fw-bold mb-0 text-uppercase small">Lista Mestre de Patrimônios (Auditoria Digital)</h5>
+        <span class="badge bg-light text-dark border">{{ audit_data|length }} itens esperados</span>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light">
+                <tr class="small text-uppercase">
+                    <th class="ps-4">Item Patrimonial</th>
+                    <th>Status de Auditoria</th>
+                    <th>Estado</th>
+                    <th>Última Verificação</th>
+                    <th class="text-end pe-4">Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in audit_data %}
+                <tr>
+                    <td class="ps-4">
+                        <div class="d-flex align-items-center">
+                            <img src="{{ item.patrimonio.imagem_url or 'https://via.placeholder.com/60?text=Item' }}" 
+                                 class="rounded border me-3" width="45" height="45" style="object-fit: cover;">
+                            <div>
+                                <div class="fw-bold">{{ item.patrimonio.numero_patrimonio }}</div>
+                                <div class="text-muted small">{{ item.patrimonio.descricao }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        {% if item.status == 'confirmado' or item.status == 'alterado' %}
+                        <span class="badge bg-success-subtle text-success px-3 py-2 border border-success-subtle">
+                            <i class="bi bi-patch-check-fill me-1"></i> ENCONTRADO
+                        </span>
+                        {% else %}
+                        <span class="badge bg-danger-subtle text-danger px-3 py-2 border border-danger-subtle">
+                            <i class="bi bi-x-circle-fill me-1"></i> PENDENTE
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge bg-{{ 'light text-dark' if item.patrimonio.status_conservacao == 'bom' else 'warning text-dark' }} border">
+                            {{ item.patrimonio.status_conservacao|upper }}
+                        </span>
+                    </td>
+                    <td class="text-muted small">
+                        {% if item.data_validacao %}
+                        {{ item.data_validacao.strftime('%d/%m/%Y %H:%M') }}
+                        {% else %}
+                        ---
+                        {% endif %}
+                    </td>
+                    <td class="text-end pe-4">
+                        <a href="{{ url_for('admin_detalhes_item', id=item.patrimonio.id) }}" class="btn btn-outline-secondary btn-sm">Editar</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Alert: Itens em Outras Salas (Conflitos) -->
+{% if conflitos %}
+<div class="card shadow-sm border-0 border-start border-4 border-warning mb-5">
+    <div class="card-header bg-warning-subtle py-3 border-bottom">
+        <h5 class="fw-bold mb-0 text-warning text-uppercase small"><i class="bi bi-exclamation-triangle-fill me-2"></i> Conflitos Detectados nesta Sala</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0">
+                <thead class="bg-light">
+                    <tr class="small text-uppercase">
+                        <th class="ps-4">Item</th>
+                        <th>Sala de Origem</th>
+                        <th>Ação Recomendada</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in conflitos %}
+                    <tr>
+                        <td class="ps-4">
+                            <div class="fw-bold">{{ c.patrimonio.numero_patrimonio }}</div>
+                            <div class="text-muted small">{{ c.patrimonio.descricao }}</div>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark border">{{ c.patrimonio.sala.nome }}</span>
+                        </td>
+                        <td>
+                            <span class="text-warning small fw-bold">Solicitar Relocação ou Devolver</span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

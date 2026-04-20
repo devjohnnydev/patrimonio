@@ -186,21 +186,105 @@ def admin_dashboard():
     inventarios_concluidos = Inventario.query.filter_by(escola_id=e_id, status='concluido').all()
     
     salas_data = []
+    total_ativos_escola = 0
+    total_encontrados_escola = 0
+    
     for s in salas:
+        # Itens ativos na sala
+        ativos_sala = Patrimonio.query.filter_by(sala_id=s.id, status='ativo').count()
+        total_ativos_escola += ativos_sala
+        
+        # Acurácia
+        acuracia = get_sala_accuracy(s.id)
+        if ativos_sala > 0:
+            # Encontrados = acuracia * ativos / 100
+            total_encontrados_escola += int((acuracia / 100) * ativos_sala)
+            
         salas_data.append({
             'obj': s,
-            'acuracia': get_sala_accuracy(s.id)
+            'acuracia': acuracia
         })
+
+    # Ranking de Intervenção (Piores 5)
+    top_criticos = sorted(salas_data, key=lambda x: x['acuracia'])[:5]
     
+    # Eficiência Global
+    global_accuracy = min(100, round((total_encontrados_escola / total_ativos_escola) * 100)) if total_ativos_escola > 0 else 100
+    
+    # Itens Sumidos (Exemplo: Itens pendentes em balanços ativos)
+    alertas_perda = db.session.query(Patrimonio).\
+        join(Sala, Patrimonio.sala_id == Sala.id).\
+        filter(Sala.escola_id == e_id, Patrimonio.status == 'ativo').\
+        limit(10).all() 
+    # Em um cenário real, cruzaríamos com os ItemInventario. Aqui pegamos ativos aleatórios para o mockup visual se necessário.
+
     return render_template('admin/dashboard.html', 
                            stats=stats, 
                            salas_meta=salas_data, 
+                           top_criticos=top_criticos,
+                           global_accuracy=global_accuracy,
+                           alertas_perda=alertas_perda,
                            relocacoes=relocacoes, 
                            quebrados=quebrados,
                            itens_por_sala=itens_por_sala,
                            conservacao_stats=conservacao_stats,
                            produtividade=produtividade,
                            inventarios_concluidos=inventarios_concluidos)
+
+@app.route('/admin/sala/<int:sala_id>')
+@login_required
+def admin_detalhes_sala(sala_id):
+    if current_user.role not in ['admin', 'coordenador']:
+        return redirect(url_for('index'))
+    
+    sala = Sala.query.filter_by(id=sala_id, escola_id=current_user.escola_id).first_or_404()
+    
+    # Itens que DEVERIAM estar aqui
+    patrimonios = Patrimonio.query.filter_by(sala_id=sala_id, status='ativo').all()
+    
+    # Último inventário para pegar o status real
+    inv = Inventario.query.filter_by(sala_id=sala_id).order_by(Inventario.data_hora_inicio.desc()).first()
+    
+    # Mapear status dos itens
+    audit_data = []
+    conferidos_count = 0
+    
+    # Itens da sala
+    for p in patrimonios:
+        item_inv = None
+        if inv:
+            item_inv = ItemInventario.query.filter_by(inventario_id=inv.id, patrimonio_id=p.id).first()
+        
+        status = 'pendente'
+        data_validacao = None
+        if item_inv:
+            status = item_inv.status
+            conferidos_count += 1
+            # Para simplificar, pegamos a data do inventário se não houver no item
+            data_validacao = inv.data_hora_fim or inv.data_hora_inicio 
+
+        audit_data.append({
+            'patrimonio': p,
+            'status': status,
+            'data_validacao': data_validacao
+        })
+    
+    # Itens de FORA encontrados aqui (Conflitos)
+    conflitos = []
+    if inv:
+        conflitos_inv = ItemInventario.query.filter_by(inventario_id=inv.id).all()
+        for ci in conflitos_inv:
+            if ci.patrimonio and ci.patrimonio.sala_id != sala_id:
+                conflitos.append(ci)
+
+    acuracia = min(100, round((conferidos_count / len(patrimonios)) * 100)) if patrimonios else 100
+    
+    return render_template('admin/detalhes_sala.html', 
+                           sala=sala, 
+                           audit_data=audit_data,
+                           conflitos=conflitos,
+                           acuracia=acuracia,
+                           inventario=inv)
 
 @app.route('/sala/exportar/<int:sala_id>')
 @login_required
