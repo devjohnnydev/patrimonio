@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-4">
+    <h2 class="fw-bold mb-0">Chat: {{ sala.nome }}</h2>
+    <p class="text-muted small">Canal direto entre Admin e Responsável</p>
+</div>
+
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card p-0 overflow-hidden shadow-lg">
+            <div id="chatBox" class="chat-container">
+                <!-- Messages will be loaded here -->
+                {% for msg in mensagens %}
+                <div class="message {{ 'sent' if msg.usuario_id == current_user.id else 'received' }}">
+                    <div class="msg-meta fw-bold">{{ 'Você' if msg.usuario_id == current_user.id else msg.usuario.nome }} • {{ msg.data_hora.strftime('%H:%M') }}</div>
+                    <div class="msg-text">{{ msg.texto }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="p-3 border-top border-white border-opacity-10 bg-dark bg-opacity-50">
+                <form id="chatForm" class="d-flex gap-2">
+                    <input type="text" id="msgInput" class="form-control" placeholder="Digite sua mensagem..." required autocomplete="off">
+                    <button type="submit" class="btn btn-primary px-4">Enviar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+const chatBox = document.getElementById('chatBox');
+const chatForm = document.getElementById('chatForm');
+const msgInput = document.getElementById('msgInput');
+
+// Auto scroll to bottom
+chatBox.scrollTop = chatBox.scrollHeight;
+
+chatForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const text = msgInput.value;
+    if (!text) return;
+    
+    // Post message
+    const formData = new FormData();
+    formData.append('texto', text);
+    
+    msgInput.value = '';
+    
+    await fetch("{{ url_for('chat', sala_id=sala.id) }}", {
+        method: 'POST',
+        body: formData
+    });
+    
+    loadMessages();
+});
+
+async function loadMessages() {
+    const res = await fetch("{{ url_for('api_chat', sala_id=sala.id) }}");
+    const messages = await res.json();
+    
+    chatBox.innerHTML = messages.map(m => `
+        <div class="message ${m.meu ? 'sent' : 'received'}">
+            <div class="msg-meta fw-bold">${m.meu ? 'Você' : m.usuario} • ${m.data}</div>
+            <div class="msg-text">${m.texto}</div>
+        </div>
+    `).join('');
+    
+    chatBox.scrollTop = chatBox.scrollHeight;
+}
+
+// Poll every 3 seconds
+setInterval(loadMessages, 3000);
+</script>
+{% endblock %}

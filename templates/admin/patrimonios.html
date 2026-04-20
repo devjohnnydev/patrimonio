@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-4 d-flex justify-content-between align-items-center">
+    <h2 class="fw-bold mb-0">Patrimônios</h2>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#novoPatMod">Novo Item</button>
+</div>
+
+<div class="card p-4">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>Tag</th>
+                    <th>Descrição</th>
+                    <th>Marca/Modelo</th>
+                    <th>Sala Atual</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for p in patrimonios %}
+                <tr>
+                    <td class="font-monospace fw-bold">{{ p.numero_patrimonio }}</td>
+                    <td>{{ p.descricao }}</td>
+                    <td>{{ p.marca }} {{ p.modelo }}</td>
+                    <td><span class="badge bg-secondary">{{ p.sala.nome }}</span></td>
+                    <td><span class="badge bg-{{ p.status|status_badge }}">{{ p.status }}</span></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="novoPatMod" tabindex="-1">
+    <div class="modal-dialog">
+        <form class="modal-content bg-dark text-white border-secondary" method="POST">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title">Cadastrar Patrimônio</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label">Número de Patrimônio (Único)</label>
+                        <input type="text" name="numero" class="form-control" required placeholder="0001">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Descrição</label>
+                        <input type="text" name="descricao" class="form-control" required placeholder="Computador Dell">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Marca</label>
+                        <input type="text" name="marca" class="form-control">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Modelo</label>
+                        <input type="text" name="modelo" class="form-control">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Alocação Inicial (Sala)</label>
+                        <select name="sala_id" class="form-select bg-dark text-white border-secondary" required>
+                            {% for s in salas %}
+                            <option value="{{ s.id }}">{{ s.nome }} ({{ s.bloco }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="submit" class="btn btn-primary w-100">Salvar Item</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

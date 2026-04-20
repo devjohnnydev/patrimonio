@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-4 d-flex justify-content-between align-items-center">
+    <h2 class="fw-bold mb-0">Gerenciar Salas</h2>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#novaSalaModal">Nova Sala</button>
+</div>
+
+<div class="card p-4">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nome</th>
+                    <th>Bloco</th>
+                    <th>Descrição</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for sala in salas %}
+                <tr>
+                    <td>{{ sala.id }}</td>
+                    <td class="fw-bold">{{ sala.nome }}</td>
+                    <td><span class="badge bg-secondary">{{ sala.bloco }}</span></td>
+                    <td class="text-muted small">{{ sala.descricao }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="novaSalaModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form class="modal-content bg-dark text-white border-secondary" method="POST">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title">Cadastrar Ambiente</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Nome da Sala</label>
+                    <input type="text" name="nome" class="form-control" required placeholder="Ex: Sala 101">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Bloco / Setor</label>
+                    <input type="text" name="bloco" class="form-control" placeholder="Ex: Bloco A">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Descrição</label>
+                    <textarea name="descricao" class="form-control" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="submit" class="btn btn-primary">Salvar</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

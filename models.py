@@ -1,0 +1,92 @@
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
+from datetime import datetime
+
+db = SQLAlchemy()
+
+# Tabela de associação para Responsáveis e Salas (Permite um responsável em várias salas)
+responsavel_salas = db.Table('responsavel_salas',
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id'), primary_key=True),
+    db.Column('sala_id', db.Integer, db.ForeignKey('sala.id'), primary_key=True)
+)
+
+class User(db.Model, UserMixin):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(256), nullable=False)
+    role = db.Column(db.String(20), default='responsavel')  # 'admin' ou 'responsavel'
+    nome = db.Column(db.String(100), nullable=False)
+    
+    # Salas vinculadas (se for responsável)
+    salas = db.relationship('Sala', secondary=responsavel_salas, backref=db.backref('responsaveis', lazy='dynamic'))
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+class Sala(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    nome = db.Column(db.String(100), nullable=False)
+    bloco = db.Column(db.String(50))
+    descricao = db.Column(db.Text)
+    
+    patrimonios = db.relationship('Patrimonio', backref='sala', lazy=True)
+
+class Patrimonio(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    numero_patrimonio = db.Column(db.String(50), unique=True, nullable=False)
+    descricao = db.Column(db.String(200), nullable=False)
+    marca = db.Column(db.String(100))
+    modelo = db.Column(db.String(100))
+    status = db.Column(db.String(20), default='ativo') # 'ativo', 'inativo'
+    sala_id = db.Column(db.Integer, db.ForeignKey('sala.id'), nullable=False)
+
+class Inventario(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    sala_id = db.Column(db.Integer, db.ForeignKey('sala.id'), nullable=False)
+    responsavel_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    data_hora_inicio = db.Column(db.DateTime, default=datetime.utcnow)
+    data_hora_fim = db.Column(db.DateTime)
+    status = db.Column(db.String(20), default='iniciado') # 'iniciado', 'concluido', 'validado'
+
+    sala = db.relationship('Sala', backref='inventarios')
+    responsavel = db.relationship('User', backref='inventarios')
+
+class ItemInventario(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    inventario_id = db.Column(db.Integer, db.ForeignKey('inventario.id'), nullable=False)
+    patrimonio_id = db.Column(db.Integer, db.ForeignKey('patrimonio.id'), nullable=True) # Null se não existir no sistema
+    sala_id_da_vez = db.Column(db.Integer, db.ForeignKey('sala.id')) # Sala onde foi encontrado
+    status = db.Column(db.String(30)) # 'confirmado', 'alterado', 'fora_de_lugar', 'nao_encontrado'
+    observacao = db.Column(db.Text)
+
+class SolicitacaoRealocacao(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    patrimonio_id = db.Column(db.Integer, db.ForeignKey('patrimonio.id'), nullable=False)
+    sala_origem_id = db.Column(db.Integer, db.ForeignKey('sala.id'), nullable=False)
+    sala_destino_id = db.Column(db.Integer, db.ForeignKey('sala.id'), nullable=False)
+    responsavel_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    status = db.Column(db.String(20), default='pendente') # 'pendente', 'aprovado', 'recusado'
+    observacao = db.Column(db.Text)
+    data_solicitacao = db.Column(db.DateTime, default=datetime.utcnow)
+
+    patrimonio = db.relationship('Patrimonio', backref='solicitacoes')
+    sala_origem = db.relationship('Sala', foreign_keys=[sala_origem_id])
+    sala_destino = db.relationship('Sala', foreign_keys=[sala_destino_id])
+    responsavel = db.relationship('User', backref='solicitacoes')
+
+class MensagemChat(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    sala_id = db.Column(db.Integer, db.ForeignKey('sala.id'), nullable=False)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    usuario_tipo = db.Column(db.String(20)) # 'adm' ou 'responsavel'
+    texto = db.Column(db.Text, nullable=False)
+    data_hora = db.Column(db.DateTime, default=datetime.utcnow)
+    lida = db.Column(db.Boolean, default=False)
+
+    usuario = db.relationship('User', backref='mensagens')
+    sala = db.relationship('Sala', backref='mensagens')

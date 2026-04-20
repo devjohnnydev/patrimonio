@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-4">
+    <h2 class="fw-bold mb-0">Olá, {{ current_user.nome }}</h2>
+    <p class="text-muted">Selecione uma sala para iniciar o inventário</p>
+</div>
+
+<div class="row g-4">
+    {% for sala in salas %}
+    <div class="col-md-4">
+        <div class="card h-100 p-4 ripple-card">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <span class="badge bg-primary px-3 py-2">{{ sala.bloco }}</span>
+                <i class="opacity-50">#{{ sala.id }}</i>
+            </div>
+            <h4 class="fw-bold mb-2">{{ sala.nome }}</h4>
+            <p class="text-muted small mb-4">{{ sala.descricao or 'Sem descrição.' }}</p>
+            
+            <div class="mt-auto d-flex gap-2">
+                <a href="{{ url_for('inventario_sala', sala_id=sala.id) }}" class="btn btn-primary flex-grow-1">Iniciar Inventário</a>
+                <a href="{{ url_for('chat', sala_id=sala.id) }}" class="btn btn-outline-light">Chat</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    
+    {% if not salas %}
+    <div class="col-12">
+        <div class="card p-5 text-center">
+            <p class="text-muted mb-0">Você não possui salas vinculadas. Entre em contato com o administrador.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.ripple-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: default;
+}
+.ripple-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+}
+</style>
+{% endblock %}

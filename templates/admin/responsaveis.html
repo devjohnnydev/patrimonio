@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-4 d-flex justify-content-between align-items-center">
+    <h2 class="fw-bold mb-0">Responsáveis por Sala</h2>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#novoRespMod">Novo Responsável</button>
+</div>
+
+<div class="card p-4">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Email</th>
+                    <th>Salas Atribuídas</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in responsaveis %}
+                <tr>
+                    <td class="fw-bold">{{ r.nome }}</td>
+                    <td>{{ r.email }}</td>
+                    <td>
+                        {% for s in r.salas %}
+                        <span class="badge bg-primary me-1">{{ s.nome }}</span>
+                        {% endfor %}
+                    </td>
+                    <td>
+                        <button class="btn btn-outline-light btn-sm">Editar</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="novoRespMod" tabindex="-1">
+    <div class="modal-dialog">
+        <form class="modal-content bg-dark text-white border-secondary" method="POST">
+            <div class="modal-header border-secondary">
+                <h5 class="modal-title">Cadastrar Responsável</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Nome Completo</label>
+                    <input type="text" name="nome" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Usuário (Login)</label>
+                    <input type="text" name="username" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input type="email" name="email" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Senha Inicial</label>
+                    <input type="password" name="password" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Vincular Salas</label>
+                    <select name="sala_ids" class="form-select bg-dark text-white border-secondary" multiple style="height: 120px;">
+                        {% for s in salas %}
+                        <option value="{{ s.id }}">{{ s.nome }} ({{ s.bloco }})</option>
+                        {% endfor %}
+                    </select>
+                    <small class="text-muted">Mantenha Ctrl pressionado para selecionar múltiplas.</small>
+                </div>
+            </div>
+            <div class="modal-footer border-secondary">
+                <button type="submit" class="btn btn-primary w-100">Criar Conta</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
