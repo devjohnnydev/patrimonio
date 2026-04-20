@@ -419,18 +419,39 @@ def seed():
         db.session.commit()
         print("Seed SaaS finalizado.")
 
-# Criar tabelas e rodar seed
+# Criar tabelas e rodar seed com verificação de integridade SaaS
 with app.app_context():
-    try:
-        # Verifica se o esquema está íntegro tentando uma consulta
-        Escola.query.first()
-        print("Esquema do banco de dados verificado e íntegro.")
-    except Exception as e:
-        print(f"Erro de esquema detectado ({e}). Recriando tabelas...")
-        db.drop_all()
+    from sqlalchemy import inspect
+    inspector = inspect(db.engine)
+    
+    # Verifica se a tabela 'user' tem a coluna 'escola_id' (critério para o modelo SaaS)
+    tabelas = inspector.get_table_names()
+    precisa_reset = False
+    
+    if 'user' in tabelas:
+        colunas_user = [c['name'] for c in inspector.get_columns('user')]
+        if 'escola_id' not in colunas_user:
+            precisa_reset = True
+            print("Detectado banco de dados antigo (sem escola_id).")
+    
+    if 'escola' not in tabelas:
+        precisa_reset = True
+        print("Detectado banco de dados incompleto (tabela 'escola' ausente).")
+
+    if precisa_reset:
+        print("Forçando recriação do banco de dados para migração SaaS...")
+        try:
+            db.drop_all()
+            db.create_all()
+            seed()
+            print("Banco de dados recriado com sucesso.")
+        except Exception as e:
+            print(f"Erro ao recriar banco: {e}")
+    else:
+        # Garante que as tabelas existam se o banco estiver vazio
         db.create_all()
         seed()
-        print("Banco de dados recriado com sucesso.")
+        print("Esquema verificado: OK.")
 
 if __name__ == '__main__':
     app.run(debug=True)
