@@ -28,13 +28,11 @@
     <div class="col-md-8">
         <div class="card p-4 shadow-sm border-0 border-top border-4 border-primary">
             <h5 class="fw-bold mb-4 text-uppercase">Editar Informações</h5>
-            <form method="POST">
-                <div class="mb-4">
-                    <label class="form-label small fw-bold">URL da Foto de Perfil</label>
-                    <input type="url" name="foto_url" class="form-control" 
-                           value="{{ current_user.foto_url or '' }}" 
-                           placeholder="https://exemplo.com/sua-foto.jpg">
-                    <div class="form-text small">Cole aqui o link de uma imagem real sua.</div>
+            <form method="POST" enctype="multipart/form-data">
+                <div class="mb-4 text-center p-3 bg-light rounded border border-dashed">
+                    <label class="form-label small fw-bold d-block mb-3 text-uppercase">Alterar Foto de Perfil</label>
+                    <input type="file" name="foto_file" class="form-control mb-2" accept="image/*">
+                    <div class="form-text small">Selecione uma imagem (JPG, PNG) do seu dispositivo.</div>
                 </div>
 
                 <div class="mb-4">

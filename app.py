@@ -57,12 +57,20 @@ def status_badge(status):
 def perfil():
     if request.method == 'POST':
         nova_senha = request.form.get('password')
-        nova_foto = request.form.get('foto_url')
         
         if nova_senha:
             current_user.set_password(nova_senha)
-        if nova_foto:
-            current_user.foto_url = nova_foto
+            
+        # Upload de Foto
+        if 'foto_file' in request.files:
+            file = request.files['foto_file']
+            if file and file.filename != '':
+                import os
+                from werkzeug.utils import secure_filename
+                filename = secure_filename(f"user_{current_user.id}_{file.filename}")
+                upload_path = os.path.join('static/uploads/perfil', filename)
+                file.save(os.path.join(app.root_path, upload_path))
+                current_user.foto_url = '/' + upload_path
             
         db.session.commit()
         flash('Perfil atualizado com sucesso!', 'success')
