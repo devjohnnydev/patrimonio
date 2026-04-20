@@ -612,7 +612,17 @@ def inventario_sala(sala_id):
         flash('Acesso negado!', 'danger')
         return redirect(url_for('index'))
     
-    inv = Inventario.query.filter_by(sala_id=sala_id, status='iniciado', escola_id=current_user.escola_id).first()
+    # Tentar buscar inventário com segurança contra falhas de migração no Postgres
+    try:
+        inv = Inventario.query.filter_by(sala_id=sala_id, status='iniciado', escola_id=current_user.escola_id).first()
+    except Exception as e:
+        # Se falhar (ex: coluna não existe), forçar migração e tentar de novo
+        from sqlalchemy import text
+        with db.engine.connect() as conn:
+            conn.execute(text("ALTER TABLE inventario ADD COLUMN IF NOT EXISTS data_limite TIMESTAMP;"))
+            conn.commit()
+        inv = Inventario.query.filter_by(sala_id=sala_id, status='iniciado', escola_id=current_user.escola_id).first()
+
     if not inv:
         inv = Inventario(sala_id=sala_id, responsavel_id=current_user.id, escola_id=current_user.escola_id)
         db.session.add(inv)
@@ -853,12 +863,20 @@ with app.app_context():
         from sqlalchemy import text
         with db.engine.connect() as conn:
             # Postgres: ADD COLUMN IF NOT EXISTS
-            conn.execute(text("ALTER TABLE inventario ADD COLUMN IF NOT EXISTS data_limite TIMESTAMP;"))
-            conn.execute(text("ALTER TABLE mensagem_chat ADD COLUMN IF NOT EXISTS lida BOOLEAN DEFAULT FALSE;"))
-            conn.commit()
+            # Usando blocos individuais para garantir que uma falha em um não pare o outro
+            try:
+                conn.execute(text("ALTER TABLE inventario ADD COLUMN IF NOT EXISTS data_limite TIMESTAMP;"))
+                conn.commit()
+            except Exception as e: print(f"Erro data_limite: {e}")
+            
+            try:
+                conn.execute(text("ALTER TABLE mensagem_chat ADD COLUMN IF NOT EXISTS lida BOOLEAN DEFAULT FALSE;"))
+                conn.commit()
+            except Exception as e: print(f"Erro lida: {e}")
+            
             print("Migração: Colunas verificadas/adicionadas com sucesso.")
     except Exception as e:
-        print(f"Migração manual: {e}")
+        print(f"Migração manual fatal: {e}")
 
     # Criar tabelas se não existirem
     db.create_all()
