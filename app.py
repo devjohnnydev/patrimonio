@@ -765,6 +765,18 @@ def seed():
 with app.app_context():
     # Criar tabelas se não existirem (sem apagar os dados atuais)
     db.create_all()
+
+    # Migração Manual Silenciosa para garantir novos campos no Railway/Postgres
+    try:
+        from sqlalchemy import text
+        with db.engine.connect() as conn:
+            # Postgres: ADD COLUMN IF NOT EXISTS
+            conn.execute(text("ALTER TABLE inventario ADD COLUMN IF NOT EXISTS data_limite TIMESTAMP;"))
+            conn.commit()
+            print("Migração: Coluna 'data_limite' verificada/adicionada.")
+    except Exception as e:
+        print(f"Migração ignorada ou já realizada: {e}")
+
     seed()
 
 if __name__ == '__main__':
