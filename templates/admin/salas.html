@@ -11,19 +11,25 @@
         <table class="table table-hover align-middle">
             <thead>
                 <tr>
-                    <th>ID</th>
+                    <th>Foto</th>
                     <th>Nome</th>
                     <th>Bloco</th>
                     <th>Descrição</th>
+                    <th class="text-end">Ações</th>
                 </tr>
             </thead>
             <tbody>
-                {% for sala in salas %}
+                {% for s in salas %}
                 <tr>
-                    <td>{{ sala.id }}</td>
-                    <td class="fw-bold">{{ sala.nome }}</td>
-                    <td><span class="badge bg-secondary">{{ sala.bloco }}</span></td>
-                    <td class="text-muted small">{{ sala.descricao }}</td>
+                    <td>
+                        <img src="{{ s.imagem_url or 'https://via.placeholder.com/100?text=Ambiente' }}" class="asset-img shadow-sm" style="width: 100px; height: 60px; object-fit: cover;" alt="">
+                    </td>
+                    <td class="fw-bold">{{ s.nome }}</td>
+                    <td><span class="badge bg-light text-dark">{{ s.bloco }}</span></td>
+                    <td class="text-muted small">{{ s.descricao }}</td>
+                    <td class="text-end">
+                        <a href="{{ url_for('chat', sala_id=s.id) }}" class="btn btn-outline-primary btn-sm">Chat</a>
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
@@ -34,27 +40,31 @@
 <!-- Modal -->
 <div class="modal fade" id="novaSalaModal" tabindex="-1">
     <div class="modal-dialog">
-        <form class="modal-content bg-dark text-white border-secondary" method="POST">
-            <div class="modal-header border-secondary">
-                <h5 class="modal-title">Cadastrar Ambiente</h5>
+        <form class="modal-content border-0 shadow-lg" method="POST">
+            <div class="modal-header bg-dark text-white rounded-0">
+                <h5 class="modal-title small fw-bold text-uppercase">Cadastrar Ambiente</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body p-4">
                 <div class="mb-3">
-                    <label class="form-label">Nome da Sala</label>
-                    <input type="text" name="nome" class="form-control" required placeholder="Ex: Sala 101">
+                    <label class="form-label small fw-bold">Nome da Sala</label>
+                    <input type="text" name="nome" class="form-control" required placeholder="Ex: Laboratório 101">
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Bloco / Setor</label>
+                    <label class="form-label small fw-bold">Bloco / Setor</label>
                     <input type="text" name="bloco" class="form-control" placeholder="Ex: Bloco A">
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Descrição</label>
+                    <label class="form-label small fw-bold">Descrição</label>
                     <textarea name="descricao" class="form-control" rows="3"></textarea>
                 </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">URL da Foto do Ambiente</label>
+                    <input type="url" name="imagem_url" class="form-control" placeholder="https://exemplo.com/sala.jpg">
+                </div>
             </div>
-            <div class="modal-footer border-secondary">
-                <button type="submit" class="btn btn-primary">Salvar</button>
+            <div class="modal-footer border-0">
+                <button type="submit" class="btn btn-primary w-100 py-2">SALVAR AMBIENTE</button>
             </div>
         </form>
     </div>

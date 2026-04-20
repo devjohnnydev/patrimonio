@@ -6,7 +6,13 @@
         <h2 class="fw-bold mb-0 text-uppercase">Patrimônios</h2>
         <p class="text-muted small">Cadastro geral de bens da unidade</p>
     </div>
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#novoPatMod">Cadastrar Novo Item</button>
+    <div class="d-flex gap-2">
+        <form action="{{ url_for('admin_importar_excel') }}" method="POST" enctype="multipart/form-data" class="d-flex gap-2 align-items-center">
+            <input type="file" name="file" class="form-control form-control-sm" accept=".xlsx, .xls" required style="width: auto;">
+            <button type="submit" class="btn btn-outline-dark btn-sm fw-bold">IMPORTAR EXCEL</button>
+        </form>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#novoPatMod">Cadastrar Novo Item</button>
+    </div>
 </div>
 
 <div class="card p-4">

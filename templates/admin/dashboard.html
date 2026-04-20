@@ -39,6 +39,62 @@
     </div>
 </div>
 
+<!-- Métricas Avançadas -->
+<div class="row g-4 mb-5">
+    <div class="col-md-7">
+        <div class="card p-4 h-100 shadow-sm">
+            <h5 class="fw-bold mb-4 text-uppercase small">Itens por Ambiente</h5>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th>Ambiente</th>
+                            <th class="text-end">Quantidade</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sala, total in itens_por_sala %}
+                        <tr>
+                            <td class="fw-bold">{{ sala }}</td>
+                            <td class="text-end font-monospace">{{ total }} unid.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-5">
+        <div class="card p-4 h-100 shadow-sm border-0 border-start border-4 border-danger mb-4">
+            <h5 class="fw-bold mb-4 text-uppercase small">Estado de Conservação (Geral)</h5>
+            <div class="list-group list-group-flush">
+                {% for status, total in conservacao_stats %}
+                <div class="list-group-item d-flex justify-content-between align-items-center bg-transparent border-light">
+                    <span class="text-uppercase fw-bold small">{{ status }}</span>
+                    <span class="badge bg-{{ 'success' if status == 'bom' else 'warning' }} rounded-pill">{{ total }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="card p-4 shadow-sm border-0 border-start border-4 border-primary">
+            <h5 class="fw-bold mb-4 text-uppercase small">Inventários por Responsável</h5>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <tbody>
+                        {% for resp, total in produtividade %}
+                        <tr>
+                            <td class="small fw-bold">{{ resp }}</td>
+                            <td class="text-end small">{{ total }} inv.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Inventários Pendentes de Validação -->
 <div class="row mb-5">
     <div class="col-12">

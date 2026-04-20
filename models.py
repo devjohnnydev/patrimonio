@@ -45,6 +45,7 @@ class Sala(db.Model):
     nome = db.Column(db.String(100), nullable=False)
     bloco = db.Column(db.String(50))
     descricao = db.Column(db.Text)
+    imagem_url = db.Column(db.String(500))
     
     patrimonios = db.relationship('Patrimonio', backref='sala', lazy=True)
 

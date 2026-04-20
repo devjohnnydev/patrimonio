@@ -3,6 +3,8 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from models import db, Escola, User, Sala, Patrimonio, Inventario, ItemInventario, SolicitacaoRealocacao, MensagemChat
 from datetime import datetime
 import os
+import pandas as pd
+from sqlalchemy import func
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-12345')
@@ -83,19 +85,96 @@ def admin_dashboard():
     if current_user.role != 'admin':
         return redirect(url_for('index'))
     
-    # Filtro por escola
     e_id = current_user.escola_id
+    
+    # Métricas Avançadas
     stats = {
         'salas': Sala.query.filter_by(escola_id=e_id).count(),
         'patrimonios': Patrimonio.query.filter_by(escola_id=e_id).count(),
         'quebrados': Patrimonio.query.filter_by(escola_id=e_id, status_conservacao='quebrado').count(),
         'relocacoes_pendentes': SolicitacaoRealocacao.query.filter_by(escola_id=e_id, status='pendente').count()
     }
+    
+    # Quantidade por Sala
+    itens_por_sala = db.session.query(Sala.nome, func.count(Patrimonio.id)).\
+        join(Patrimonio, Patrimonio.sala_id == Sala.id).\
+        filter(Sala.escola_id == e_id).\
+        group_by(Sala.nome).all()
+
+    # Status de Conservação
+    conservacao_stats = db.session.query(Patrimonio.status_conservacao, func.count(Patrimonio.id)).\
+        filter(Patrimonio.escola_id == e_id).\
+        group_by(Patrimonio.status_conservacao).all()
+
+    # Produtividade por Responsável
+    produtividade = db.session.query(User.nome, func.count(Inventario.id)).\
+        join(Inventario, Inventario.responsavel_id == User.id).\
+        filter(User.escola_id == e_id).\
+        group_by(User.nome).all()
+
     salas = Sala.query.filter_by(escola_id=e_id).all()
     relocacoes = SolicitacaoRealocacao.query.filter_by(escola_id=e_id, status='pendente').all()
     quebrados = Patrimonio.query.filter_by(escola_id=e_id, status_conservacao='quebrado').all()
     
-    return render_template('admin/dashboard.html', stats=stats, salas=salas, relocacoes=relocacoes, quebrados=quebrados)
+    return render_template('admin/dashboard.html', 
+                           stats=stats, 
+                           salas=salas, 
+                           relocacoes=relocacoes, 
+                           quebrados=quebrados,
+                           itens_por_sala=itens_por_sala,
+                           conservacao_stats=conservacao_stats,
+                           produtividade=produtividade)
+
+@app.route('/admin/importar', methods=['POST'])
+@login_required
+def admin_importar_excel():
+    if current_user.role != 'admin': return redirect(url_for('index'))
+    if 'file' not in request.files:
+        flash('Nenhum arquivo enviado', 'danger')
+        return redirect(url_for('admin_patrimonios'))
+    
+    file = request.files['file']
+    if file.filename == '':
+        flash('Nenhum arquivo selecionado', 'danger')
+        return redirect(url_for('admin_patrimonios'))
+
+    try:
+        df = pd.read_excel(file)
+        e_id = current_user.escola_id
+        count = 0
+        
+        for _, row in df.iterrows():
+            # Buscar ou criar sala
+            sala_nome = str(row.get('Sala', 'Geral')).strip()
+            sala = Sala.query.filter_by(nome=sala_nome, escola_id=e_id).first()
+            if not sala:
+                sala = Sala(nome=sala_nome, bloco='-', escola_id=e_id)
+                db.session.add(sala)
+                db.session.commit()
+            
+            # Criar Patrimônio
+            novo_pat = Patrimonio(
+                numero_patrimonio=str(row.get('Patrimonio', row.get('Tag', ''))),
+                descricao=str(row.get('Descricao', row.get('Item', 'Sem Descrição'))),
+                marca=str(row.get('Marca', '')),
+                modelo=str(row.get('Modelo', '')),
+                imagem_url=str(row.get('Foto', '')),
+                sala_id=sala.id,
+                escola_id=e_id
+            )
+            
+            # Evitar duplicados por número
+            existente = Patrimonio.query.filter_by(numero_patrimonio=novo_pat.numero_patrimonio, escola_id=e_id).first()
+            if not existente:
+                db.session.add(novo_pat)
+                count += 1
+        
+        db.session.commit()
+        flash(f'Sucesso! {count} itens importados com sucesso.', 'success')
+    except Exception as e:
+        flash(f'Erro ao processar Excel: {e}', 'danger')
+        
+    return redirect(url_for('admin_patrimonios'))
 
 # CRUD Salas
 @app.route('/admin/salas', methods=['GET', 'POST'])
@@ -437,6 +516,12 @@ with app.app_context():
     if 'escola' not in tabelas:
         precisa_reset = True
         print("Detectado banco de dados incompleto (tabela 'escola' ausente).")
+    
+    if 'sala' in tabelas:
+        colunas_sala = [c['name'] for c in inspector.get_columns('sala')]
+        if 'imagem_url' not in colunas_sala:
+            precisa_reset = True
+            print("Detectado banco de dados sem suporte a fotos de ambiente.")
 
     if precisa_reset:
         print("Forçando recriação do banco de dados para migração SaaS...")
