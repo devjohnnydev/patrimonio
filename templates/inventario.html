@@ -12,6 +12,44 @@
     {# Este painel será atualizado via JS #}
 </div>
 
+<!-- Ferramentas Offline -->
+<div class="card p-3 mb-4 border-0 shadow-sm bg-light">
+    <div class="row align-items-center">
+        <div class="col-md-6 mb-3 mb-md-0">
+            <h6 class="fw-bold mb-1 small text-uppercase">Trabalho Offline</h6>
+            <p class="small text-muted mb-0">Baixe o Excel, preencha a lista e suba aqui quando terminar.</p>
+        </div>
+        <div class="col-md-6 text-md-end">
+            <div class="btn-group w-100">
+                <a href="{{ url_for('admin_baixar_excel', sala_id=sala.id) }}" class="btn btn-outline-dark fw-bold btn-sm">BAIXAR LISTA EXCEL</a>
+                <button class="btn btn-dark fw-bold btn-sm" data-bs-toggle="modal" data-bs-target="#uploadExcelModal">SUBIR PLANILHA</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Upload Excel -->
+<div class="modal fade" id="uploadExcelModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form class="modal-content border-0 shadow" action="{{ url_for('inventario_subir_excel', inv_id=inventario.id) }}" method="POST" enctype="multipart/form-data">
+            <div class="modal-header bg-dark text-white rounded-0">
+                <h5 class="modal-title small fw-bold">SINCRONIZAR BALANÇO VIA EXCEL</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="small text-muted mb-4">Selecione o arquivo Excel preenchido para que o sistema registre todos os itens automaticamente.</p>
+                <input type="file" name="file" class="form-control mb-3" accept=".xlsx" required>
+                <div class="alert alert-info small py-2 mb-0">
+                    <i class="me-2">ℹ️</i> Itens de outras salas detectados serão disparados para aprovação do Admin.
+                </div>
+            </div>
+            <div class="modal-footer border-0 p-4">
+                <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">INICIAR SINCRONIZAÇÃO</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- Scanner Mobile -->
 <div class="card mb-4 border-0 shadow-sm overflow-hidden">
     <div class="card-header bg-dark text-white text-center py-3">

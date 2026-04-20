@@ -73,32 +73,39 @@
 
             {% if fora_de_lugar %}
             <div class="mb-4">
-                <h6 class="text-warning fw-bold"><i class="me-2">⚠️</i> ITENS ENCONTRADOS (PERTENCEM A OUTRA SALA)</h6>
+                <h6 class="text-danger fw-bold"><i class="me-2">🚩</i> ITENS LOCALIZADOS DE OUTROS AMBIENTES (INVASORES)</h6>
                 <div class="table-responsive">
                     <table class="table table-sm align-middle">
-                        <thead class="table-light">
+                        <thead class="table-dark">
                             <tr>
                                 <th>Patrimônio</th>
-                                <th>Descrição</th>
-                                <th>Origem Correta</th>
-                                <th>Ação</th>
+                                <th>Descrição/Evidência</th>
+                                <th>Ambiente de Origem</th>
+                                <th>Responsável Original</th>
+                                <th>Status de Movimentação</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for r in fora_de_lugar %}
-                            <tr>
+                            <tr class="table-danger border-danger">
                                 <td class="font-monospace fw-bold">{{ r.patrimonio.numero_patrimonio }}</td>
                                 <td>
                                     {{ r.patrimonio.descricao }}
                                     {% if r.foto_validacao_url %}
                                     <div class="mt-2">
                                         <img src="{{ r.foto_validacao_url }}" class="rounded shadow-sm" style="width: 120px; height: 80px; object-fit: cover;" alt="Evidência">
-                                        <div class="small text-success fw-bold" style="font-size: 0.6rem;">📸 EVIDÊNCIA FOTOGRÁFICA</div>
                                     </div>
                                     {% endif %}
                                 </td>
-                                <td>{{ r.patrimonio.sala.nome }}</td>
-                                <td><span class="badge bg-warning">Realocação Solicitada</span></td>
+                                <td class="fw-bold">{{ r.patrimonio.sala.nome }}</td>
+                                <td>
+                                    {% for prof in r.patrimonio.sala.responsaveis %}
+                                        <div class="small fw-bold">{{ prof.nome }}</div>
+                                    {% endfor %}
+                                </td>
+                                <td>
+                                    <span class="badge bg-danger text-uppercase p-2">🔒 Aguardando Autorização do Adm</span>
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>

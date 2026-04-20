@@ -54,12 +54,16 @@
             </ul>
             
             <div class="mt-auto pt-4">
-                <div class="d-flex align-items-center text-white px-2">
-                    <img src="https://ui-avatars.com/api/?name={{ current_user.nome }}&background=da251d&color=fff" alt="" width="36" height="36" class="rounded-circle me-2 border border-white border-opacity-25">
+                <a href="{{ url_for('perfil') }}" class="d-flex align-items-center text-white px-2 text-decoration-none profile-link py-2 rounded">
+                    <img src="{{ current_user.foto_url or 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + current_user.username }}" 
+                         alt="" width="36" height="36" class="rounded-circle me-2 border border-white border-opacity-25 shadow-sm" style="object-fit: cover;">
                     <div class="overflow-hidden">
                         <div class="fw-bold small text-truncate">{{ current_user.nome }}</div>
-                        <a href="{{ url_for('logout') }}" class="text-white text-opacity-50 small text-decoration-none">Sair do sistema</a>
+                        <div class="text-white text-opacity-50 small" style="font-size: 0.65rem;">Gerenciar minha conta</div>
                     </div>
+                </a>
+                <div class="mt-2 text-center">
+                    <a href="{{ url_for('logout') }}" class="text-white text-opacity-25 small text-decoration-none italic" style="font-size: 0.7rem;">Sair do sistema</a>
                 </div>
             </div>
         </nav>

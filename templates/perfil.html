@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-4">
+    <h2 class="fw-bold mb-0 text-uppercase">Meu Perfil Profissional</h2>
+    <p class="text-muted">Gerencie sua identidade e segurança no sistema SENAI.</p>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="card p-4 text-center shadow-sm">
+            <div class="mb-3 position-relative d-inline-block mx-auto">
+                <img src="{{ current_user.foto_url or 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + current_user.username }}" 
+                     class="rounded-circle border border-4 border-light shadow" 
+                     style="width: 150px; height: 150px; object-fit: cover;" alt="Foto de Perfil">
+            </div>
+            <h4 class="fw-bold mb-1">{{ current_user.nome }}</h4>
+            <div class="badge bg-dark text-uppercase mb-3">{{ current_user.role }}</div>
+            <div class="text-muted small mb-3">Unidade: {{ current_user.escola.nome }}</div>
+            <hr>
+            <div class="text-start small">
+                <strong>Username:</strong> {{ current_user.username }}<br>
+                <strong>Email:</strong> {{ current_user.email }}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card p-4 shadow-sm border-0 border-top border-4 border-primary">
+            <h5 class="fw-bold mb-4 text-uppercase">Editar Informações</h5>
+            <form method="POST">
+                <div class="mb-4">
+                    <label class="form-label small fw-bold">URL da Foto de Perfil</label>
+                    <input type="url" name="foto_url" class="form-control" 
+                           value="{{ current_user.foto_url or '' }}" 
+                           placeholder="https://exemplo.com/sua-foto.jpg">
+                    <div class="form-text small">Cole aqui o link de uma imagem real sua.</div>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-bold">Alterar Senha</label>
+                    <input type="password" name="password" class="form-control" 
+                           placeholder="Deixe em branco para manter a atual">
+                    <div class="form-text small">Use uma senha forte com letras e números.</div>
+                </div>
+
+                <button type="submit" class="btn btn-primary px-5 py-2 fw-bold text-uppercase">Salvar Alterações</button>
+            </form>
+        </div>
+
+        <div class="card p-4 mt-4 bg-light border-0">
+            <h6 class="fw-bold text-uppercase small mb-3 text-muted">Acesso e Segurança</h6>
+            <p class="small text-muted mb-0">
+                Seu perfil é utilizado para assinar eletronicamente os balanços de inventário. 
+                Certifique-se de que sua foto e nome estejam corretos para garantir a validade dos registros.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

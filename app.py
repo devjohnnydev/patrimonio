@@ -51,6 +51,25 @@ def status_badge(status):
     }
     return badges.get(status, 'primary')
 
+# --- Perfil e Identidade ---
+@app.route('/perfil', methods=['GET', 'POST'])
+@login_required
+def perfil():
+    if request.method == 'POST':
+        nova_senha = request.form.get('password')
+        nova_foto = request.form.get('foto_url')
+        
+        if nova_senha:
+            current_user.set_password(nova_senha)
+        if nova_foto:
+            current_user.foto_url = nova_foto
+            
+        db.session.commit()
+        flash('Perfil atualizado com sucesso!', 'success')
+        return redirect(url_for('perfil'))
+        
+    return render_template('perfil.html')
+
 # --- Rotas de Autenticação ---
 @app.route('/')
 def index():
@@ -470,6 +489,59 @@ def inventario_assinar(inv_id):
         return redirect(url_for('professor_dashboard'))
     
     flash('Assinatura é obrigatória para finalizar.', 'danger')
+    return redirect(url_for('inventario_sala', sala_id=inv.sala_id))
+
+@app.route('/inventario/subir_excel/<int:inv_id>', methods=['POST'])
+@login_required
+def inventario_subir_excel(inv_id):
+    inv = Inventario.query.filter_by(id=inv_id, escola_id=current_user.escola_id).first_or_404()
+    if 'file' not in request.files:
+        flash('Nenhum arquivo enviado', 'danger')
+        return redirect(url_for('inventario_sala', sala_id=inv.sala_id))
+        
+    file = request.files['file']
+    try:
+        wb = openpyxl.load_workbook(file)
+        sheet = wb.active
+        count = 0
+        
+        # O Excel exportado tem numero de patrimonio na primeira coluna (A)
+        for row in sheet.iter_rows(min_row=2):
+            numero = str(row[0].value).strip() if row[0].value else None
+            if not numero: continue
+            
+            pat = Patrimonio.query.filter_by(numero_patrimonio=numero, escola_id=current_user.escola_id).first()
+            if not pat: continue
+            
+            # Verifica se já foi conferido
+            existente = ItemInventario.query.filter_by(inventario_id=inv_id, patrimonio_id=pat.id).first()
+            if existente: continue
+            
+            if pat.sala_id == inv.sala_id:
+                item_inv = ItemInventario(inventario_id=inv_id, patrimonio_id=pat.id, sala_id_da_vez=inv.sala_id, status='confirmado')
+            else:
+                # ITEM DE OUTRO AMBIENTE: Criar ItemInventario e abrir Solicitação de Realocação
+                item_inv = ItemInventario(inventario_id=inv_id, patrimonio_id=pat.id, sala_id_da_vez=inv.sala_id, status='fora_de_lugar')
+                # Gera solicitação para o Admin autorizar a mudança definitiva
+                solicitacao = SolicitacaoRealocacao(
+                    escola_id=inv.escola_id,
+                    patrimonio_id=pat.id,
+                    sala_origem_id=pat.sala_id,
+                    sala_destino_id=inv.sala_id,
+                    responsavel_id=current_user.id,
+                    status='pendente',
+                    observacao='Detectado via Balanço Excel'
+                )
+                db.session.add(solicitacao)
+                
+            db.session.add(item_inv)
+            count += 1
+            
+        db.session.commit()
+        flash(f'Excel processado! {count} itens sincronizados com sucesso.', 'success')
+    except Exception as e:
+        flash(f'Erro ao processar arquivo: {e}', 'danger')
+        
     return redirect(url_for('inventario_sala', sala_id=inv.sala_id))
 
 # Registro de Scan (AJAX) com verificação de local

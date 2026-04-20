@@ -30,6 +30,7 @@ class User(db.Model, UserMixin):
     password_hash = db.Column(db.String(256), nullable=False)
     role = db.Column(db.String(20), default='professor')  # 'admin', 'coordenador', 'professor'
     nome = db.Column(db.String(100), nullable=False)
+    foto_url = db.Column(db.String(500)) # Foto de perfil
     
     salas = db.relationship('Sala', secondary=responsavel_salas, backref=db.backref('responsaveis', lazy='dynamic'))
 
