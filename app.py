@@ -475,35 +475,40 @@ def admin_descartar(id):
 def admin_balanco_inventario(inv_id):
     if current_user.role not in ['admin', 'coordenador']: return redirect(url_for('index'))
     
-    # Auto-cura para o Admin caso as colunas novas ainda não estejam sincronizadas
+    # Modo de Diagnóstico para o Admin
     try:
-        inv = Inventario.query.filter_by(id=inv_id, escola_id=current_user.escola_id).first_or_404()
-    except Exception:
-        from sqlalchemy import text
-        with db.engine.connect() as conn:
-            conn.execute(text("ALTER TABLE inventario ADD COLUMN IF NOT EXISTS data_limite TIMESTAMP;"))
-            conn.commit()
-        inv = Inventario.query.filter_by(id=inv_id, escola_id=current_user.escola_id).first_or_404()
+        # Auto-cura para o Admin caso as colunas novas ainda não estejam sincronizadas
+        try:
+            inv = Inventario.query.filter_by(id=inv_id, escola_id=current_user.escola_id).first_or_404()
+        except Exception:
+            from sqlalchemy import text
+            with db.engine.connect() as conn:
+                conn.execute(text("ALTER TABLE inventario ADD COLUMN IF NOT EXISTS data_limite TIMESTAMP;"))
+                conn.commit()
+            inv = Inventario.query.filter_by(id=inv_id, escola_id=current_user.escola_id).first_or_404()
 
-    # Itens esperados vs Registrados
-    esperados = Patrimonio.query.filter_by(sala_id=inv.sala_id, status='ativo').all()
-    registrados = ItemInventario.query.filter_by(inventario_id=inv.id).all()
-    
-    confirmados = [r for r in registrados if r.status == 'confirmado']
-    
-    # Proteção para p.id vs ItemInventario sem patrimônio id (tags desconhecidas)
-    registrados_ids = [r.patrimonio_id for r in registrados if r.patrimonio_id is not None]
-    faltantes = [p for p in esperados if p.id not in registrados_ids]
-    
-    fora_de_lugar = [r for r in registrados if r.status == 'fora_de_lugar']
-    nao_encontrados = [r for r in registrados if r.status == 'nao_encontrado']
-    
-    return render_template('admin/balanco.html', 
-                           inv=inv, 
-                           confirmados=confirmados, 
-                           faltantes=faltantes, 
-                           fora_de_lugar=fora_de_lugar,
-                           nao_encontrados=nao_encontrados)
+        # Itens esperados vs Registrados
+        esperados = Patrimonio.query.filter_by(sala_id=inv.sala_id, status='ativo').all()
+        registrados = ItemInventario.query.filter_by(inventario_id=inv.id).all()
+        
+        confirmados = [r for r in registrados if r.status == 'confirmado']
+        
+        # Proteção para p.id vs ItemInventario sem patrimônio id (tags desconhecidas)
+        registrados_ids = [r.patrimonio_id for r in registrados if r.patrimonio_id is not None]
+        faltantes = [p for p in esperados if p.id not in registrados_ids]
+        
+        fora_de_lugar = [r for r in registrados if r.status == 'fora_de_lugar']
+        nao_encontrados = [r for r in registrados if r.status == 'nao_encontrado']
+        
+        return render_template('admin/balanco.html', 
+                               inv=inv, 
+                               confirmados=confirmados, 
+                               faltantes=faltantes, 
+                               fora_de_lugar=fora_de_lugar,
+                               nao_encontrados=nao_encontrados)
+    except Exception as e:
+        # Captura erro de template ou lógica e mostra na tela
+        return f"Erro no Relatório Consolidado: {str(e)}", 500
 
 @app.route('/admin/validar_inventario/<int:inv_id>')
 @login_required
