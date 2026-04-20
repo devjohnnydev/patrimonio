@@ -26,6 +26,18 @@ login_manager.login_view = 'login'
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+@app.context_processor
+def inject_notifications():
+    if current_user.is_authenticated:
+        q = MensagemChat.query.filter_by(escola_id=current_user.escola_id, lida=False).filter(MensagemChat.usuario_id != current_user.id)
+        if current_user.role == 'professor':
+            sala_ids = [s.id for s in current_user.salas]
+            unread_count = q.filter(MensagemChat.sala_id.in_(sala_ids)).count()
+        else:
+            unread_count = q.count()
+        return dict(unread_count=unread_count)
+    return dict(unread_count=0)
+
 # --- Auxiliares e Mock de E-mail ---
 def mock_enviar_email(destinatario, assunto, corpo):
     print("\n--- [SIMULAÇÃO DE E-MAIL] ---")
@@ -81,6 +93,31 @@ def perfil():
         return redirect(url_for('perfil'))
         
     return render_template('perfil.html')
+
+@app.route('/notificacoes')
+@login_required
+def notificacoes():
+    q = MensagemChat.query.filter_by(escola_id=current_user.escola_id, lida=False).filter(MensagemChat.usuario_id != current_user.id)
+    if current_user.role == 'professor':
+        sala_ids = [s.id for s in current_user.salas]
+        unread_msgs = q.filter(MensagemChat.sala_id.in_(sala_ids)).all()
+    else:
+        unread_msgs = q.all()
+    
+    alertas = {}
+    for msg in unread_msgs:
+        if msg.sala_id not in alertas:
+            alertas[msg.sala_id] = {'sala': msg.sala, 'count': 0, 'data': msg.data_hora}
+        alertas[msg.sala_id]['count'] += 1
+    return render_template('notificacoes.html', alertas=alertas.values())
+
+def get_sala_accuracy(sala_id):
+    total = Patrimonio.query.filter_by(sala_id=sala_id, status='ativo').count()
+    if total == 0: return 100
+    inv = Inventario.query.filter_by(sala_id=sala_id).order_by(Inventario.data_hora_inicio.desc()).first()
+    if not inv: return 0
+    conferidos = ItemInventario.query.filter_by(inventario_id=inv.id).filter(ItemInventario.status.in_(['confirmado', 'alterado'])).count()
+    return min(100, round((conferidos / total) * 100))
 
 # --- Rotas de Autenticação ---
 @app.route('/')
@@ -148,9 +185,16 @@ def admin_dashboard():
     quebrados = Patrimonio.query.filter_by(escola_id=e_id, status_conservacao='quebrado').all()
     inventarios_concluidos = Inventario.query.filter_by(escola_id=e_id, status='concluido').all()
     
+    salas_data = []
+    for s in salas:
+        salas_data.append({
+            'obj': s,
+            'acuracia': get_sala_accuracy(s.id)
+        })
+    
     return render_template('admin/dashboard.html', 
                            stats=stats, 
-                           salas=salas, 
+                           salas_meta=salas_data, 
                            relocacoes=relocacoes, 
                            quebrados=quebrados,
                            itens_por_sala=itens_por_sala,
@@ -431,7 +475,49 @@ def admin_processar_relocacao(id, acao):
 def professor_dashboard():
     if current_user.role != 'professor':
         return redirect(url_for('index'))
-    return render_template('responsavel/dashboard.html', salas=current_user.salas)
+    
+    salas_data = []
+    for s in current_user.salas:
+        # Itens que DEVERIAM estar aqui
+        total_ativos = Patrimonio.query.filter_by(sala_id=s.id, status='ativo').count()
+        
+        # Último inventário (para progresso e prazo)
+        inv = Inventario.query.filter_by(sala_id=s.id).order_by(Inventario.data_hora_inicio.desc()).first()
+        
+        # Última contagem FINALIZADA
+        last_inv = Inventario.query.filter_by(sala_id=s.id, status='concluido').order_by(Inventario.data_hora_fim.desc()).first()
+        
+        # Métricas do inventário atual
+        encontrados = 0
+        conflitos = 0
+        quebrados = Patrimonio.query.filter_by(sala_id=s.id, status_conservacao='quebrado').count()
+        
+        if inv:
+            # Encontrados: itens no inventário que pertencem a esta sala
+            encontrados = db.session.query(func.count(ItemInventario.id)).\
+                join(Patrimonio, ItemInventario.patrimonio_id == Patrimonio.id).\
+                filter(ItemInventario.inventario_id == inv.id, Patrimonio.sala_id == s.id).scalar() or 0
+                
+            # Conflitos: itens achados aqui que são de outra sala
+            conflitos = db.session.query(func.count(ItemInventario.id)).\
+                join(Patrimonio, ItemInventario.patrimonio_id == Patrimonio.id).\
+                filter(ItemInventario.inventario_id == inv.id, Patrimonio.sala_id != s.id).scalar() or 0
+
+        acuracia = min(100, round((encontrados / total_ativos) * 100)) if total_ativos > 0 else 100
+        
+        salas_data.append({
+            'obj': s,
+            'acuracia': acuracia,
+            'encontrados': encontrados,
+            'faltantes': max(0, total_ativos - encontrados),
+            'conflitos': conflitos,
+            'quebrados': quebrados,
+            'total_ativos': total_ativos,
+            'ultima_contagem': last_inv.data_hora_fim.strftime('%d/%m/%Y') if last_inv else 'N/A',
+            'prazo': inv.data_limite.strftime('%d/%m/%Y') if inv and inv.data_limite else 'Sem prazo'
+        })
+        
+    return render_template('responsavel/dashboard.html', salas_meta=salas_data)
 
 # Inventário Logic
 @app.route('/inventario/sala/<int:sala_id>')
@@ -632,6 +718,10 @@ def chat(sala_id):
         db.session.add(msg)
         db.session.commit()
         return jsonify({"status": "ok"})
+    
+    # Marcar mensagens como lidas para este usuário
+    MensagemChat.query.filter_by(sala_id=sala_id).filter(MensagemChat.usuario_id != current_user.id).update({MensagemChat.lida: True})
+    db.session.commit()
     
     mensagens = MensagemChat.query.filter_by(sala_id=sala_id).order_by(MensagemChat.data_hora.asc()).all()
     return render_template('chat.html', sala=sala, mensagens=mensagens)

@@ -7,31 +7,91 @@
 </div>
 
 <div class="row g-4">
-    {% for sala in salas %}
-    <div class="col-md-4">
-        <div class="card h-100 p-0 ripple-card overflow-hidden">
-            <img src="{{ sala.imagem_url or 'https://images.unsplash.com/photo-1568992687345-26948fad3105?q=80&w=400&auto=format&fit=crop' }}" class="card-img-top" style="height: 160px; object-fit: cover;" alt="">
-            <div class="p-4 d-flex flex-column h-100">
-                <div class="d-flex justify-content-between align-items-start mb-3">
-                    <span class="badge bg-danger px-3 py-2 fw-bold">{{ sala.bloco }}</span>
-                    <i class="opacity-50 small text-muted">ID #{{ sala.id }}</i>
+    {% for s_meta in salas_meta %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 shadow-sm border-0 border-top border-4 border-danger ripple-card overflow-hidden">
+            <!-- Header com Foto e Badge -->
+            <div class="position-relative">
+                <img src="{{ s_meta.obj.imagem_url or 'https://images.unsplash.com/photo-1568992687345-26948fad3105?q=80&w=400&auto=format&fit=crop' }}" 
+                     class="card-img-top" style="height: 120px; object-fit: cover;" alt="">
+                <div class="position-absolute top-0 end-0 m-2">
+                    <span class="badge bg-danger shadow-sm text-uppercase fw-bold">{{ s_meta.obj.bloco }}</span>
                 </div>
-                <h4 class="fw-bold mb-2">{{ sala.nome }}</h4>
-                <p class="text-muted small mb-4">{{ sala.descricao or 'Ambiente designado pronto para conferência.' }}</p>
+            </div>
+
+            <div class="card-body d-flex flex-column p-4">
+                <h4 class="fw-bold mb-1">{{ s_meta.obj.nome }}</h4>
+                <p class="text-muted small mb-3 border-bottom pb-2">{{ s_meta.obj.descricao or 'Ambiente operacional.' }}</p>
                 
+                <!-- Barra de Progresso Principal -->
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <small class="fw-bold text-uppercase text-secondary" style="font-size: 0.65rem;">Acurácia Atual</small>
+                        <small class="fw-bold text-{{ 'success' if s_meta.acuracia == 100 else 'primary' }}">{{ s_meta.acuracia }}%</small>
+                    </div>
+                    <div class="progress" style="height: 10px;">
+                        <div class="progress-bar {{ 'bg-success' if s_meta.acuracia == 100 else 'bg-primary' }} progress-bar-striped progress-bar-animated" 
+                             role="progressbar" 
+                             style="width: {{ s_meta.acuracia }}%"></div>
+                    </div>
+                </div>
+
+                <!-- Grade de Métricas -->
+                <div class="row g-2 mb-4 text-center">
+                    <div class="col-4">
+                        <div class="bg-light p-2 rounded border border-dashed">
+                            <div class="fw-bold text-danger">{{ s_meta.faltantes }}</div>
+                            <div class="text-muted" style="font-size: 0.6rem; text-transform: uppercase;">Faltantes</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="bg-light p-2 rounded border border-dashed">
+                            <div class="fw-bold text-warning">{{ s_meta.conflitos }}</div>
+                            <div class="text-muted" style="font-size: 0.6rem; text-transform: uppercase;">Conflitos</div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="bg-light p-2 rounded border border-dashed">
+                            <div class="fw-bold text-dark">{{ s_meta.quebrados }}</div>
+                            <div class="text-muted" style="font-size: 0.6rem; text-transform: uppercase;">Danificados</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Timeline de Auditoria -->
+                <div class="small mb-4 p-3 bg-light rounded text-muted" style="line-height: 1.6;">
+                    <div class="d-flex justify-content-between">
+                        <span><i class="bi bi-calendar-check me-1"></i> Última contagem:</span>
+                        <span class="fw-bold text-dark">{{ s_meta.ultima_contagem }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span><i class="bi bi-clock-history me-1"></i> Prazo entrega:</span>
+                        <span class="fw-bold text-danger">{{ s_meta.prazo }}</span>
+                    </div>
+                </div>
+
                 <div class="mt-auto">
                     <div class="d-flex gap-2 mb-2">
-                        <a href="{{ url_for('inventario_sala', sala_id=sala.id) }}" class="btn btn-primary flex-grow-1 fw-bold">INVENTÁRIO</a>
-                        <a href="{{ url_for('exportar_sala_excel', sala_id=sala.id) }}" class="btn btn-outline-dark" title="Baixar Lista Excel">📥</a>
+                        <a href="{{ url_for('inventario_sala', sala_id=s_meta.obj.id) }}" class="btn btn-primary flex-grow-1 fw-bold text-uppercase py-2" style="font-size: 0.8rem;">
+                            Iniciar/Continuar
+                        </a>
+                        <a href="{{ url_for('chat', sala_id=s_meta.obj.id) }}" class="btn btn-dark" title="Chat com Admin">
+                            <i class="bi bi-chat-dots-fill"></i>
+                        </a>
                     </div>
-                    <a href="{{ url_for('chat', sala_id=sala.id) }}" class="btn btn-outline-secondary w-100 btn-sm fw-bold">CHAT COM ADMIN</a>
+                    <div class="text-center">
+                        <a href="{{ url_for('exportar_sala_excel', sala_id=s_meta.obj.id) }}" class="text-decoration-none small text-muted hover-red">
+                            <i class="bi bi-file-earmark-excel me-1"></i> Baixar lista para conferência
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
     {% endfor %}
+</div>
     
-    {% if not salas %}
+    {% if not salas_meta %}
     <div class="col-12">
         <div class="card p-5 text-center">
             <p class="text-muted mb-0">Você não possui salas vinculadas. Entre em contato com o administrador.</p>

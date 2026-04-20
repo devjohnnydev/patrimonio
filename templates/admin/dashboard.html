@@ -43,20 +43,29 @@
 <div class="row g-4 mb-5">
     <div class="col-md-7">
         <div class="card p-4 h-100 shadow-sm">
-            <h5 class="fw-bold mb-4 text-uppercase small">Itens por Ambiente</h5>
+            <h5 class="fw-bold mb-4 text-uppercase small">Acurácia dos Ambientes</h5>
             <div class="table-responsive">
                 <table class="table table-sm align-middle">
                     <thead>
                         <tr>
                             <th>Ambiente</th>
-                            <th class="text-end">Quantidade</th>
+                            <th class="text-end">Acurácia / Progresso</th>
                         </tr>
                     </thead>
                     <tbody>
-                        {% for sala, total in itens_por_sala %}
+                        {% for s_meta in salas_meta %}
                         <tr>
-                            <td class="fw-bold">{{ sala }}</td>
-                            <td class="text-end font-monospace">{{ total }} unid.</td>
+                            <td class="fw-bold">{{ s_meta.obj.nome }}</td>
+                            <td class="text-end">
+                                <div class="d-flex align-items-center justify-content-end gap-2">
+                                    <div class="progress flex-grow-1" style="height: 6px; width: 100px;">
+                                        <div class="progress-bar {{ 'bg-success' if s_meta.acuracia == 100 else 'bg-primary' }}" 
+                                             role="progressbar" 
+                                             style="width: {{ s_meta.acuracia }}%"></div>
+                                    </div>
+                                    <span class="font-monospace small fw-bold">{{ s_meta.acuracia }}%</span>
+                                </div>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>

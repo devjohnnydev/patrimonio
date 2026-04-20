@@ -69,6 +69,7 @@ class Inventario(db.Model):
     responsavel_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     data_hora_inicio = db.Column(db.DateTime, default=datetime.utcnow)
     data_hora_fim = db.Column(db.DateTime)
+    data_limite = db.Column(db.DateTime) # Prazo final planejado
     status = db.Column(db.String(20), default='iniciado')
     assinatura_base64 = db.Column(db.Text) # Desenho da assinatura manuscrita
 
