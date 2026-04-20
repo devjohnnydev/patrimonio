@@ -244,11 +244,19 @@ def admin_salas():
             descricao=request.form.get('descricao'),
             escola_id=e_id
         )
+        # Vincular Professor(es) se selecionado
+        prof_ids = request.form.getlist('professor_ids')
+        for pid in prof_ids:
+            u = User.query.filter_by(id=pid, escola_id=e_id).first()
+            if u: nova_sala.responsaveis.append(u)
+            
         db.session.add(nova_sala)
         db.session.commit()
-        flash('Sala cadastrada!', 'success')
+        flash('Ambiente cadastrado e professor vinculado!', 'success')
+        
     salas = Sala.query.filter_by(escola_id=e_id).all()
-    return render_template('admin/salas.html', salas=salas)
+    professores = User.query.filter_by(role='professor', escola_id=e_id).all()
+    return render_template('admin/salas.html', salas=salas, professores=professores)
 
 # CRUD Patrimonio
 @app.route('/admin/patrimonios', methods=['GET', 'POST'])
@@ -330,7 +338,7 @@ def admin_responsaveis():
             username=request.form.get('username'),
             email=request.form.get('email'),
             nome=request.form.get('nome'),
-            role='responsavel',
+            role=request.form.get('role', 'professor'),
             escola_id=e_id
         )
         novo_u.set_password(senha_pura)

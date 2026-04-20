@@ -14,7 +14,7 @@
                     <th>Foto</th>
                     <th>Nome</th>
                     <th>Bloco</th>
-                    <th>Descrição</th>
+                    <th>Responsável</th>
                     <th class="text-end">Ações</th>
                 </tr>
             </thead>
@@ -26,9 +26,18 @@
                     </td>
                     <td class="fw-bold">{{ s.nome }}</td>
                     <td><span class="badge bg-light text-dark">{{ s.bloco }}</span></td>
-                    <td class="text-muted small">{{ s.descricao }}</td>
+                    <td>
+                        {% for r in s.responsaveis %}
+                        <div class="small fw-bold text-danger">• {{ r.nome }}</div>
+                        {% else %}
+                        <span class="text-muted small italic">Nenhum designado</span>
+                        {% endfor %}
+                    </td>
                     <td class="text-end">
-                        <a href="{{ url_for('chat', sala_id=s.id) }}" class="btn btn-outline-primary btn-sm">Chat</a>
+                        <div class="btn-group">
+                            <a href="{{ url_for('admin_responsaveis') }}" class="btn btn-outline-dark btn-sm">Designar</a>
+                            <a href="{{ url_for('chat', sala_id=s.id) }}" class="btn btn-outline-primary btn-sm">Chat</a>
+                        </div>
                     </td>
                 </tr>
                 {% endfor %}
@@ -56,7 +65,16 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label small fw-bold">Descrição</label>
-                    <textarea name="descricao" class="form-control" rows="3"></textarea>
+                    <textarea name="descricao" class="form-control" rows="2"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Professor(es) Responsável(is)</label>
+                    <select name="professor_ids" class="form-select" multiple style="height: 100px;">
+                        {% for p in professores %}
+                        <option value="{{ p.id }}">{{ p.nome }}</option>
+                        {% endfor %}
+                    </select>
+                    <small class="text-muted small">Pode selecionar mais de um segurando Ctrl.</small>
                 </div>
                 <div class="mb-3">
                     <label class="form-label small fw-bold">URL da Foto do Ambiente</label>
@@ -64,7 +82,7 @@
                 </div>
             </div>
             <div class="modal-footer border-0">
-                <button type="submit" class="btn btn-primary w-100 py-2">SALVAR AMBIENTE</button>
+                <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">CRIAR AMBIENTE E SALVAR</button>
             </div>
         </form>
     </div>
