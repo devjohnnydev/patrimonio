@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastrar Escola — SENAI Gestão de Patrimônio</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+
+        body {
+            background: #0f0f0f;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 16px;
+        }
+
+        .register-wrapper {
+            width: 100%;
+            max-width: 860px;
+        }
+
+        /* Hero strip */
+        .hero {
+            background: #cc0000;
+            border-radius: 16px 16px 0 0;
+            padding: 32px 40px 28px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        .hero img { height: 52px; object-fit: contain; }
+        .hero-text h1 {
+            color: #fff;
+            font-size: 1.4rem;
+            font-weight: 800;
+            margin: 0;
+            letter-spacing: 0.04em;
+        }
+        .hero-text p {
+            color: rgba(255,255,255,0.75);
+            font-size: 0.82rem;
+            margin: 4px 0 0;
+        }
+
+        /* Card */
+        .card-body-custom {
+            background: #fff;
+            border-radius: 0 0 16px 16px;
+            padding: 36px 40px 40px;
+        }
+
+        /* Section label */
+        .section-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: #cc0000;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 8px;
+            margin-bottom: 20px;
+        }
+
+        .form-control, .form-select {
+            border-radius: 8px;
+            border: 1.5px solid #e0e0e0;
+            padding: 10px 14px;
+            font-size: 0.9rem;
+            transition: border-color 0.2s;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: #cc0000;
+            box-shadow: 0 0 0 3px rgba(204,0,0,0.08);
+        }
+        .form-label {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: #444;
+            margin-bottom: 6px;
+        }
+
+        .btn-register {
+            background: #cc0000;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 14px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            width: 100%;
+            transition: background 0.2s, transform 0.1s;
+        }
+        .btn-register:hover { background: #a80000; transform: translateY(-1px); }
+        .btn-register:active { transform: translateY(0); }
+
+        .divider {
+            height: 1px;
+            background: #f0f0f0;
+            margin: 28px 0;
+        }
+
+        .info-box {
+            background: #fff8f0;
+            border: 1.5px solid #ffe0b2;
+            border-radius: 10px;
+            padding: 14px 18px;
+            font-size: 0.82rem;
+            color: #7a4f00;
+        }
+        .info-box strong { color: #cc0000; }
+
+        .alert { border-radius: 8px; font-size: 0.88rem; }
+
+        .back-link {
+            color: rgba(255,255,255,0.6);
+            font-size: 0.8rem;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 16px;
+            transition: color 0.2s;
+        }
+        .back-link:hover { color: #fff; }
+    </style>
+</head>
+<body>
+<div class="register-wrapper">
+
+    <a href="{{ url_for('login') }}" class="back-link">← Voltar ao login</a>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }} mb-3">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="hero">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/0/05/SENAI_logo_2024.png" alt="SENAI">
+        <div class="hero-text">
+            <h1>Cadastrar Escola na Plataforma</h1>
+            <p>Gestão de Patrimônio SaaS — Rede SENAI São Paulo</p>
+        </div>
+    </div>
+
+    <div class="card-body-custom">
+        <form method="POST">
+
+            <!-- Dados da Escola -->
+            <div class="section-label mb-1 mt-0">🏫 Dados da Unidade Escolar</div>
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <label class="form-label">Nome da Escola <span class="text-danger">*</span></label>
+                    <input type="text" name="escola_nome" class="form-control" placeholder="Ex: SENAI Morvan Figueiredo" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Código SENAI <span class="text-danger">*</span></label>
+                    <input type="text" name="codigo_senai" class="form-control" placeholder="Ex: 1.03" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Cidade</label>
+                    <input type="text" name="cidade" class="form-control" placeholder="São Paulo">
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <!-- Conta do Administrador -->
+            <div class="section-label">👤 Conta do Administrador da Escola</div>
+            <div class="info-box mb-4">
+                Esta conta terá acesso <strong>total</strong> à gestão da sua unidade — salas, patrimônios, funcionários e inventários. Use um e-mail institucional.
+            </div>
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <label class="form-label">Nome Completo <span class="text-danger">*</span></label>
+                    <input type="text" name="admin_nome" class="form-control" placeholder="Nome do responsável" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">E-mail Institucional <span class="text-danger">*</span></label>
+                    <input type="email" name="admin_email" class="form-control" placeholder="seu@sp.senai.br" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Usuário (Login) <span class="text-danger">*</span></label>
+                    <input type="text" name="admin_username" class="form-control" placeholder="ex: admin.morvan" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Senha <span class="text-danger">*</span></label>
+                    <input type="password" name="admin_password" class="form-control" placeholder="Mín. 6 caracteres" required minlength="6">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Confirmar Senha <span class="text-danger">*</span></label>
+                    <input type="password" name="admin_password_confirm" class="form-control" placeholder="Repita a senha" required>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-register">
+                🚀 CRIAR CONTA E ACESSAR A PLATAFORMA
+            </button>
+
+            <p class="text-center text-muted mt-3" style="font-size:0.78rem;">
+                Já tem uma conta? <a href="{{ url_for('login') }}" class="text-danger fw-bold text-decoration-none">Fazer login</a>
+            </p>
+        </form>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

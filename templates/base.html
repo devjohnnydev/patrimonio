@@ -18,8 +18,12 @@
         <!-- Sidebar -->
         <nav class="sidebar d-flex flex-column shadow">
             <div class="mb-5 text-center">
+                {% if current_user.escola.foto_url %}
+                <img src="{{ current_user.escola.foto_url }}" alt="{{ current_user.escola.nome }}" class="img-fluid px-3 mb-2" style="max-height: 60px; object-fit: contain;">
+                {% else %}
                 <img src="https://upload.wikimedia.org/wikipedia/commons/0/05/SENAI_logo_2024.png" alt="SENAI" class="img-fluid px-3 mb-2" style="max-height: 50px; object-fit: contain;">
-                <div class="school-badge text-uppercase">{{ current_user.escola.nome }}</div>
+                {% endif %}
+                <div class="school-badge text-uppercase mt-2">{{ current_user.escola.nome }}</div>
             </div>
             
             <ul class="nav flex-column mb-auto">
@@ -42,6 +46,14 @@
                 <li class="nav-item">
                     <a href="{{ url_for('admin_responsaveis') }}" class="nav-link {{ 'active' if request.endpoint == 'admin_responsaveis' }}">
                         Lista de Funcionários
+                    </a>
+                </li>
+                <li class="nav-item mt-3">
+                    <h6 class="sidebar-heading px-3 text-muted" style="font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase;">Administração</h6>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('admin_escola_config') }}" class="nav-link {{ 'active' if request.endpoint == 'admin_escola_config' }}">
+                        Configurações da Unidade
                     </a>
                 </li>
                 {% else %}

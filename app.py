@@ -199,6 +199,69 @@ def login():
         flash('Usuário ou senha inválidos', 'danger')
     return render_template('login.html')
 
+# --- Cadastro de Nova Escola (Auto-Serviço SaaS) ---
+@app.route('/registrar-escola', methods=['GET', 'POST'])
+def registrar_escola():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+
+    if request.method == 'POST':
+        escola_nome   = request.form.get('escola_nome', '').strip()
+        codigo_senai  = request.form.get('codigo_senai', '').strip()
+        cidade        = request.form.get('cidade', '').strip() or 'São Paulo'
+        admin_nome    = request.form.get('admin_nome', '').strip()
+        admin_email   = request.form.get('admin_email', '').strip()
+        admin_username= request.form.get('admin_username', '').strip()
+        admin_pass    = request.form.get('admin_password', '')
+        admin_confirm = request.form.get('admin_password_confirm', '')
+
+        # Validações
+        if admin_pass != admin_confirm:
+            flash('As senhas não coincidem.', 'danger')
+            return render_template('registrar_escola.html')
+        if len(admin_pass) < 6:
+            flash('A senha deve ter pelo menos 6 caracteres.', 'danger')
+            return render_template('registrar_escola.html')
+        if Escola.query.filter_by(codigo_senai=codigo_senai).first():
+            flash(f'Já existe uma escola registrada com o código "{codigo_senai}".', 'danger')
+            return render_template('registrar_escola.html')
+        if User.query.filter_by(username=admin_username).first():
+            flash(f'O usuário "{admin_username}" já está em uso. Escolha outro.', 'danger')
+            return render_template('registrar_escola.html')
+        if User.query.filter_by(email=admin_email).first():
+            flash(f'O e-mail "{admin_email}" já está cadastrado.', 'danger')
+            return render_template('registrar_escola.html')
+
+        # Criar escola
+        nova_escola = Escola(nome=escola_nome, codigo_senai=codigo_senai, cidade=cidade)
+        db.session.add(nova_escola)
+        db.session.commit()
+
+        # Criar admin da escola
+        admin = User(
+            username=admin_username,
+            email=admin_email,
+            nome=admin_nome,
+            role='admin',
+            escola_id=nova_escola.id
+        )
+        admin.set_password(admin_pass)
+        db.session.add(admin)
+        db.session.commit()
+
+        # E-mail de boas-vindas
+        base_url = request.host_url.rstrip('/')
+        enviar_email(
+            admin_email,
+            f'Bem-vindo ao SENAI Patrimônio — {escola_nome}',
+            corpo_boas_vindas(admin, admin_pass, escola_nome, base_url)
+        )
+
+        flash(f'Escola "{escola_nome}" cadastrada com sucesso! Faça login para começar.', 'success')
+        return redirect(url_for('login'))
+
+    return render_template('registrar_escola.html')
+
 # --- Esqueci minha senha ---
 @app.route('/esqueci-senha', methods=['GET', 'POST'])
 def esqueci_senha():
@@ -664,6 +727,39 @@ def admin_responsaveis():
     salas = Sala.query.filter_by(escola_id=e_id).all()
     return render_template('admin/responsaveis.html', responsaveis=responsaveis, salas=salas)
 
+# --- Configurações da Unidade (SaaS) ---
+@app.route('/admin/escola/config', methods=['GET', 'POST'])
+@login_required
+def admin_escola_config():
+    if current_user.role not in ['admin']:
+        flash('Acesso restrito a administradores.', 'danger')
+        return redirect(url_for('index'))
+    
+    escola = current_user.escola
+    
+    if request.method == 'POST':
+        escola.nome = request.form.get('nome', '').strip()
+        escola.codigo_senai = request.form.get('codigo_senai', '').strip()
+        escola.cidade = request.form.get('cidade', '').strip()
+        
+        # Upload de Logo da Escola
+        if 'foto_file' in request.files:
+            file = request.files['foto_file']
+            if file and file.filename != '':
+                filename = secure_filename(f"escola_{escola.id}_{file.filename}")
+                upload_dir = os.path.join(app.root_path, 'static/uploads/escola')
+                os.makedirs(upload_dir, exist_ok=True)
+                
+                full_path = os.path.join(upload_dir, filename)
+                file.save(full_path)
+                escola.foto_url = f"/static/uploads/escola/{filename}"
+        
+        db.session.commit()
+        flash('Configurações da unidade atualizadas com sucesso!', 'success')
+        return redirect(url_for('admin_escola_config'))
+        
+    return render_template('admin/escola_config.html', escola=escola)
+
 # Validação de Relocação
 @app.route('/admin/relocacao/<int:id>/<string:acao>')
 @login_required
@@ -998,6 +1094,11 @@ with app.app_context():
                 conn.execute(text("ALTER TABLE mensagem_chat ADD COLUMN IF NOT EXISTS lida BOOLEAN DEFAULT FALSE;"))
                 conn.commit()
             except Exception as e: print(f"Erro lida: {e}")
+            
+            try:
+                conn.execute(text("ALTER TABLE escola ADD COLUMN IF NOT EXISTS foto_url VARCHAR(500);"))
+                conn.commit()
+            except Exception as e: print(f"Erro foto_url: {e}")
             
             print("Migração: Colunas verificadas/adicionadas com sucesso.")
     except Exception as e:

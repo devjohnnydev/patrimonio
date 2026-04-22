@@ -11,6 +11,7 @@ class Escola(db.Model):
     nome = db.Column(db.String(150), nullable=False)
     codigo_senai = db.Column(db.String(20), unique=True)
     cidade = db.Column(db.String(100))
+    foto_url = db.Column(db.String(500)) # Custom logo for the school
     
     usuarios = db.relationship('User', backref='escola', lazy=True)
     salas = db.relationship('Sala', backref='escola', lazy=True)

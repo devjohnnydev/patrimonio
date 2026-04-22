@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="mb-4">
+    <h2 class="fw-bold mb-0 text-uppercase">Configurações da Unidade</h2>
+    <p class="text-muted small">Personalize os dados e a identidade visual da sua Escola SENAI na plataforma.</p>
+</div>
+
+<div class="row align-items-start">
+    <div class="col-md-4 mb-4">
+        <div class="card p-0 shadow-sm border-0 bg-dark text-white rounded-4 overflow-hidden">
+            <div class="card-body text-center p-4">
+                {% if escola.foto_url %}
+                <img src="{{ escola.foto_url }}" class="img-fluid bg-white rounded-3 p-3 shadow-sm mb-3" style="width: 160px; height: 160px; object-fit: contain;" alt="Logo da Escola">
+                {% else %}
+                <div class="bg-white rounded-3 p-3 shadow-sm mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 160px; height: 160px;">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/0/05/SENAI_logo_2024.png" class="img-fluid" style="max-height: 80px;" alt="SENAI Default Logo">
+                </div>
+                {% endif %}
+                <h5 class="fw-bold text-uppercase mb-1" style="font-size: 0.95rem;">{{ escola.nome }}</h5>
+                <p class="mb-0 text-white-50 small">Código: {{ escola.codigo_senai }}</p>
+                <div class="mt-3">
+                    <span class="badge bg-danger shadow-sm">{{ escola.salas|length }} Ambientes</span>
+                    <span class="badge bg-secondary shadow-sm">{{ escola.usuarios|length }} Usuários</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card p-4 shadow-sm border-0 rounded-4">
+            <h6 class="fw-bold text-uppercase text-danger mb-4" style="font-size: 0.8rem; letter-spacing: 0.05em;"><i class="bi bi-gear-fill me-2"></i>Dados Gerais</h6>
+            
+            <form method="POST" enctype="multipart/form-data">
+                <div class="row g-3 mb-4">
+                    <div class="col-md-8">
+                        <label class="form-label small fw-bold">Nome da Escola</label>
+                        <input type="text" name="nome" class="form-control bg-light" value="{{ escola.nome }}" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small fw-bold">Código SENAI</label>
+                        <input type="text" name="codigo_senai" class="form-control bg-light" value="{{ escola.codigo_senai }}" required>
+                    </div>
+                    <div class="col-md-12">
+                        <label class="form-label small fw-bold">Cidade</label>
+                        <input type="text" name="cidade" class="form-control bg-light" value="{{ escola.cidade }}">
+                    </div>
+                </div>
+
+                <hr class="border-secondary opacity-25 mb-4">
+
+                <h6 class="fw-bold text-uppercase text-danger mb-4" style="font-size: 0.8rem; letter-spacing: 0.05em;"><i class="bi bi-image me-2"></i>Identidade Visual (Logo)</h6>
+                <div class="mb-4">
+                    <p class="small text-muted mb-2">Envie o logotipo específico da sua unidade. Ele substituirá o logo padrão do SENAI no menu lateral.</p>
+                    <input class="form-control form-control-sm bg-light" type="file" name="foto_file" accept=".jpg,.jpeg,.png,.webp,.svg">
+                    <small class="text-muted" style="font-size: 0.7rem;">Formatos aceitos: JPG, PNG, WEBP, SVG. Fundo transparente recomendado.</small>
+                </div>
+
+                <div class="text-end">
+                    <button type="submit" class="btn btn-primary fw-bold text-uppercase px-4 py-2"><i class="bi bi-check2-circle me-1"></i> Salvar Configurações</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
