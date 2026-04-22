@@ -20,12 +20,12 @@
             </thead>
             <tbody>
                 {% for s in salas %}
-                <tr>
+                <tr class="sala-row" data-href="{{ url_for('admin_detalhes_sala', sala_id=s.id) }}" style="cursor: pointer;">
                     <td>
                         <img src="{{ s.imagem_url or 'https://via.placeholder.com/100?text=Ambiente' }}" class="asset-img shadow-sm" style="width: 100px; height: 60px; object-fit: cover;" alt="">
                     </td>
                     <td class="fw-bold">{{ s.nome }}</td>
-                    <td><span class="badge bg-light text-dark">{{ s.bloco }}</span></td>
+                    <td><span class="badge bg-light text-dark">{{ s.bloco or '-' }}</span></td>
                     <td>
                         {% for r in s.responsaveis %}
                         <div class="small fw-bold text-danger">• {{ r.nome }}</div>
@@ -33,7 +33,7 @@
                         <span class="text-muted small italic">Nenhum designado</span>
                         {% endfor %}
                     </td>
-                    <td class="text-end">
+                    <td class="text-end" onclick="event.stopPropagation()">
                         <div class="btn-group">
                             <button class="btn btn-outline-dark btn-sm" 
                                     data-bs-toggle="modal" 
@@ -98,6 +98,13 @@
 </div>
 
 <script>
+    // Clique na linha navega para os detalhes da sala
+    document.querySelectorAll('.sala-row').forEach(function(row) {
+        row.addEventListener('click', function() {
+            window.location.href = row.getAttribute('data-href');
+        });
+    });
+
     const editarModal = document.getElementById('editarSalaModal');
     editarModal.addEventListener('show.bs.modal', function (event) {
         const button = event.relatedTarget;
@@ -108,9 +115,9 @@
         
         // Preenche campos
         document.getElementById('edit_nome').value = button.getAttribute('data-nome');
-        document.getElementById('edit_bloco').value = button.getAttribute('data-bloco');
-        document.getElementById('edit_desc').value = button.getAttribute('data-descricao');
-        document.getElementById('edit_img').value = button.getAttribute('data-imagem');
+        document.getElementById('edit_bloco').value = button.getAttribute('data-bloco') || '';
+        document.getElementById('edit_desc').value = button.getAttribute('data-descricao') || '';
+        document.getElementById('edit_img').value = button.getAttribute('data-imagem') || '';
         
         // Select multiple professores
         const profs = JSON.parse(button.getAttribute('data-profs'));
