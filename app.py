@@ -960,20 +960,59 @@ def api_chat(sala_id):
         })
     return jsonify(res)
 
-# --- Inicialização Direcionada (Fresh Start) ---
-def seed():
-    if not Escola.query.first():
-        # Única Estrutura Fixa: SENAI São Paulo
-        e1 = Escola(nome='SENAI São Paulo', codigo_senai='SP-01', cidade='São Paulo')
-        db.session.add(e1)
-        db.session.commit()
+# --- Inicialização Multi-Escola SENAI SP ---
+# Estrutura de escolas da rede SENAI
+ESCOLAS_SENAI = [
+    {'nome': 'SENAI Morvan Figueiredo', 'codigo': '1.03', 'cidade': 'São Paulo', 'admin_user': 'admin.morvan', 'admin_email': 'admin.morvan@sp.senai.br'},
+    # Adicione novas escolas aqui conforme a rede expandir:
+    # {'nome': 'SENAI Escola X', 'codigo': '1.XX', 'cidade': 'Cidade', 'admin_user': 'admin.escolax', 'admin_email': 'admin.escolax@sp.senai.br'},
+]
 
-        # Admin Master Limpo
-        admin = User(username='admin', email='admin@senai.br', nome='Administrador Master', role='admin', escola_id=e1.id)
-        admin.set_password('admin123')
-        db.session.add(admin)
-        db.session.commit()
-        print("Ambiente Limpo: Sistema pronto para dados reais.")
+def seed():
+    """Inicializa o banco com as escolas da rede SENAI configuradas acima."""
+    for escola_data in ESCOLAS_SENAI:
+        # Verificar se a escola já existe (pelo código único)
+        escola = Escola.query.filter_by(codigo_senai=escola_data['codigo']).first()
+        if not escola:
+            escola = Escola(
+                nome=escola_data['nome'],
+                codigo_senai=escola_data['codigo'],
+                cidade=escola_data['cidade']
+            )
+            db.session.add(escola)
+            db.session.commit()
+            print(f"[SEED] Escola criada: {escola_data['nome']} ({escola_data['codigo']})")
+
+        # Criar admin da escola se não existir
+        admin_existente = User.query.filter_by(username=escola_data['admin_user']).first()
+        if not admin_existente:
+            admin = User(
+                username=escola_data['admin_user'],
+                email=escola_data['admin_email'],
+                nome=f"Administrador — {escola_data['nome']}",
+                role='admin',
+                escola_id=escola.id
+            )
+            admin.set_password('Senai@2025')
+            db.session.add(admin)
+            db.session.commit()
+            print(f"[SEED] Admin criado: {escola_data['admin_user']} | Senha: Senai@2025")
+    
+    # Admin Master Global (acesso irrestrito, para suporte técnico)
+    if not User.query.filter_by(username='admin').first():
+        primeira_escola = Escola.query.first()
+        if primeira_escola:
+            master = User(
+                username='admin',
+                email='admin@sp.senai.br',
+                nome='Administrador Master — Suporte TI',
+                role='admin',
+                escola_id=primeira_escola.id
+            )
+            master.set_password('admin123')
+            db.session.add(master)
+            db.session.commit()
+            print("[SEED] Admin Master criado: admin | Senha: admin123")
 
 # Verificação e Reset Forçado para Limpeza
 with app.app_context():
@@ -1000,6 +1039,19 @@ with app.app_context():
 
     # Criar tabelas se não existirem
     db.create_all()
+    
+    # Migração de dados: atualizar escola genérica para SENAI Morvan Figueiredo
+    try:
+        escola_antiga = Escola.query.filter_by(codigo_senai='SP-01').first()
+        if escola_antiga:
+            escola_antiga.nome = 'SENAI Morvan Figueiredo'
+            escola_antiga.codigo_senai = '1.03'
+            escola_antiga.cidade = 'São Paulo'
+            db.session.commit()
+            print("[MIGRAÇÃO] Escola atualizada para: SENAI Morvan Figueiredo (1.03)")
+    except Exception as e:
+        print(f"[MIGRAÇÃO] Escola rename: {e}")
+    
     seed()
 
 if __name__ == '__main__':
