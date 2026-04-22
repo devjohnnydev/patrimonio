@@ -6,31 +6,42 @@
     <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#novoRespMod">Novo Membro</button>
 </div>
 
-<div class="card p-4">
+<div class="card p-0 shadow-sm border-0 overflow-hidden">
     <div class="table-responsive">
-        <table class="table table-hover align-middle">
-            <thead>
-                <tr>
-                    <th>Nome</th>
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light">
+                <tr class="small text-uppercase">
+                    <th class="ps-4 py-3">Nome</th>
                     <th>Perfil</th>
                     <th>Email</th>
                     <th>Ambientes Designados</th>
+                    <th class="text-end pe-4">Ações</th>
                 </tr>
             </thead>
             <tbody>
                 {% for r in responsaveis %}
                 <tr>
-                    <td class="fw-bold">{{ r.nome }}</td>
+                    <td class="fw-bold ps-4">{{ r.nome }}</td>
                     <td>
                         <span class="badge bg-{{ 'dark' if r.role == 'coordenador' else 'light text-dark border' }} text-uppercase">
                             {{ r.role }}
                         </span>
                     </td>
-                    <td>{{ r.email }}</td>
+                    <td class="text-muted small">{{ r.email }}</td>
                     <td>
                         {% for s in r.salas %}
                         <span class="badge bg-danger me-1" style="font-size: 0.7rem;">{{ s.nome }}</span>
+                        {% else %}
+                        <span class="text-muted small">Nenhum</span>
                         {% endfor %}
+                    </td>
+                    <td class="text-end pe-4">
+                        <a href="{{ url_for('admin_resetar_senha', user_id=r.id) }}"
+                           class="btn btn-outline-warning btn-sm fw-bold"
+                           onclick="return confirm('Enviar link de redefinição de senha para {{ r.email }}?')"
+                           title="Enviar link de reset de senha por e-mail">
+                            <i class="bi bi-key me-1"></i> Resetar Senha
+                        </a>
                     </td>
                 </tr>
                 {% endfor %}
@@ -39,7 +50,7 @@
     </div>
 </div>
 
-<!-- Modal -->
+<!-- Modal Criar Membro -->
 <div class="modal fade" id="novoRespMod" tabindex="-1">
     <div class="modal-dialog">
         <form class="modal-content border-0 shadow-lg" method="POST">
@@ -48,6 +59,9 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
+                <div class="alert alert-info small border-0 rounded-0 border-start border-4 border-info py-2">
+                    <i class="bi bi-envelope-check me-1"></i> O novo membro receberá as credenciais de acesso automaticamente por e-mail.
+                </div>
                 <div class="mb-3">
                     <label class="form-label small fw-bold">Nome Completo</label>
                     <input type="text" name="nome" class="form-control" required>
@@ -64,25 +78,28 @@
                     <input type="text" name="username" class="form-control" required>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label small fw-bold">Email</label>
-                    <input type="email" name="email" class="form-control" required>
+                    <label class="form-label small fw-bold">E-mail <span class="text-danger">*</span></label>
+                    <input type="email" name="email" class="form-control" required placeholder="usuario@senai.br">
+                    <small class="text-muted">O acesso será enviado para este e-mail.</small>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Senha Inicial</label>
-                    <input type="password" name="password" class="form-control" required>
+                    <label class="form-label small fw-bold">Senha Inicial</label>
+                    <input type="password" name="password" class="form-control" required minlength="6">
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Vincular Salas</label>
-                    <select name="sala_ids" class="form-select bg-dark text-white border-secondary" multiple style="height: 120px;">
+                    <label class="form-label small fw-bold">Vincular Salas</label>
+                    <select name="sala_ids" class="form-select" multiple style="height: 120px;">
                         {% for s in salas %}
-                        <option value="{{ s.id }}">{{ s.nome }} ({{ s.bloco }})</option>
+                        <option value="{{ s.id }}">{{ s.nome }} ({{ s.bloco or 'sem bloco' }})</option>
                         {% endfor %}
                     </select>
-                    <small class="text-muted">Mantenha Ctrl pressionado para selecionar múltiplas.</small>
+                    <small class="text-muted">Segure Ctrl para selecionar múltiplas salas.</small>
                 </div>
             </div>
-            <div class="modal-footer border-secondary">
-                <button type="submit" class="btn btn-primary w-100">Criar Conta</button>
+            <div class="modal-footer border-0">
+                <button type="submit" class="btn btn-primary w-100 py-2 fw-bold text-uppercase">
+                    <i class="bi bi-person-plus me-2"></i>Criar Conta e Enviar Acesso
+                </button>
             </div>
         </form>
     </div>

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row justify-content-center align-items-center" style="min-height: 80vh;">
+    <div class="col-md-5 col-lg-4">
+        <div class="text-center mb-4">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/0/05/SENAI_logo_2024.png" alt="SENAI" class="img-fluid mb-4" style="max-height: 80px; object-fit: contain;">
+            <h5 class="fw-bold text-uppercase" style="letter-spacing: 0.08em;">Nova Senha</h5>
+            <p class="text-muted small">Escolha uma senha segura com pelo menos 6 caracteres.</p>
+        </div>
+
+        <div class="card shadow-sm border-0 p-4">
+            <form method="POST">
+                <input type="hidden" name="token" value="{{ token }}">
+                <div class="mb-3">
+                    <label class="form-label small fw-bold text-uppercase">Nova Senha</label>
+                    <input type="password" name="password" class="form-control" placeholder="••••••••" required minlength="6" autocomplete="new-password">
+                </div>
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-uppercase">Confirmar Nova Senha</label>
+                    <input type="password" name="confirm_password" class="form-control" placeholder="••••••••" required autocomplete="new-password">
+                </div>
+                <button type="submit" class="btn btn-primary w-100 py-2 fw-bold text-uppercase">Salvar Nova Senha</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

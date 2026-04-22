@@ -1,5 +1,7 @@
 from flask import Flask, render_template, redirect, url_for, request, flash, jsonify
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
+from flask_mail import Mail, Message
+from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from models import db, Escola, User, Sala, Patrimonio, Inventario, ItemInventario, SolicitacaoRealocacao, MensagemChat
 from datetime import datetime
 import os
@@ -16,6 +18,17 @@ if database_url and database_url.startswith("postgres://"):
 
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url or 'sqlite:///patrimonio.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# --- Configuração de Email (Flask-Mail via SMTP) ---
+app.config['MAIL_SERVER']   = os.environ.get('MAIL_SERVER', 'smtp.gmail.com')
+app.config['MAIL_PORT']     = int(os.environ.get('MAIL_PORT', 587))
+app.config['MAIL_USE_TLS']  = os.environ.get('MAIL_USE_TLS', 'true').lower() == 'true'
+app.config['MAIL_USERNAME'] = os.environ.get('MAIL_USERNAME', '')
+app.config['MAIL_PASSWORD'] = os.environ.get('MAIL_PASSWORD', '')
+app.config['MAIL_DEFAULT_SENDER'] = os.environ.get('MAIL_DEFAULT_SENDER', 'noreply@senai.br')
+
+mail = Mail(app)
+serializer = URLSafeTimedSerializer(app.config['SECRET_KEY'])
 
 db.init_app(app)
 login_manager = LoginManager()
@@ -38,13 +51,59 @@ def inject_notifications():
         return dict(unread_count=unread_count)
     return dict(unread_count=0)
 
-# --- Auxiliares e Mock de E-mail ---
-def mock_enviar_email(destinatario, assunto, corpo):
-    print("\n--- [SIMULAÇÃO DE E-MAIL] ---")
-    print(f"PARA: {destinatario}")
-    print(f"ASSUNTO: {assunto}")
-    print(f"MENSAGEM: {corpo}")
-    print("-----------------------------\n")
+# --- Auxiliares de E-mail ---
+def enviar_email(destinatario, assunto, corpo_html):
+    """Envia e-mail real via Flask-Mail. Faz log se falhar."""
+    try:
+        msg = Message(assunto, recipients=[destinatario], html=corpo_html)
+        mail.send(msg)
+        print(f"[EMAIL ENVIADO] Para: {destinatario} | Assunto: {assunto}")
+    except Exception as e:
+        print(f"[EMAIL ERRO] Falha ao enviar para {destinatario}: {e}")
+
+def corpo_boas_vindas(user, senha_pura, escola_nome, base_url):
+    salas = ', '.join([s.nome for s in user.salas]) or 'Nenhum ambiente designado ainda'
+    return f"""
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;">
+      <div style="background:#cc0000;padding:24px;text-align:center;">
+        <h1 style="color:white;margin:0;font-size:28px;">SENAI</h1>
+        <p style="color:rgba(255,255,255,0.8);margin:4px 0 0;">Gestão de Patrimônio</p>
+      </div>
+      <div style="padding:32px;background:#f9f9f9;">
+        <h2 style="color:#222;">Olá, {user.nome}! 👋</h2>
+        <p style="color:#555;">Seu acesso à plataforma de <strong>Gestão de Patrimônio SENAI</strong> foi criado com sucesso.</p>
+        <div style="background:#fff;border:1px solid #eee;border-radius:8px;padding:20px;margin:20px 0;">
+          <p style="margin:0 0 8px;"><strong>🏫 Unidade:</strong> {escola_nome}</p>
+          <p style="margin:0 0 8px;"><strong>👤 Usuário:</strong> <code style="background:#f0f0f0;padding:2px 6px;border-radius:4px;">{user.username}</code></p>
+          <p style="margin:0 0 8px;"><strong>🔑 Senha:</strong> <code style="background:#f0f0f0;padding:2px 6px;border-radius:4px;">{senha_pura}</code></p>
+          <p style="margin:0;"><strong>🏠 Ambientes:</strong> {salas}</p>
+        </div>
+        <div style="text-align:center;margin:24px 0;">
+          <a href="{base_url}" style="background:#cc0000;color:white;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:bold;">ACESSAR PLATAFORMA</a>
+        </div>
+        <p style="color:#999;font-size:12px;">Este é um e-mail automático. Não responda a esta mensagem.</p>
+      </div>
+    </div>
+    """
+
+def corpo_reset_senha(user, link):
+    return f"""
+    <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto;">
+      <div style="background:#cc0000;padding:24px;text-align:center;">
+        <h1 style="color:white;margin:0;font-size:28px;">SENAI</h1>
+        <p style="color:rgba(255,255,255,0.8);margin:4px 0 0;">Gestão de Patrimônio</p>
+      </div>
+      <div style="padding:32px;background:#f9f9f9;">
+        <h2 style="color:#222;">Redefinição de Senha</h2>
+        <p style="color:#555;">Olá, <strong>{user.nome}</strong>. Uma solicitação de redefinição de senha foi feita para sua conta.</p>
+        <div style="text-align:center;margin:32px 0;">
+          <a href="{link}" style="background:#cc0000;color:white;padding:14px 32px;border-radius:6px;text-decoration:none;font-weight:bold;">REDEFINIR MINHA SENHA</a>
+        </div>
+        <p style="color:#999;font-size:12px;">Este link expira em <strong>1 hora</strong>. Se não foi você, ignore este e-mail.</p>
+        <p style="color:#bbb;font-size:11px;">SENAI São Paulo — Gestão de Patrimônio SaaS</p>
+      </div>
+    </div>
+    """
 
 @app.template_filter('status_badge')
 def status_badge(status):
@@ -139,6 +198,58 @@ def login():
             return redirect(url_for('index'))
         flash('Usuário ou senha inválidos', 'danger')
     return render_template('login.html')
+
+# --- Esqueci minha senha ---
+@app.route('/esqueci-senha', methods=['GET', 'POST'])
+def esqueci_senha():
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip().lower()
+        user = User.query.filter(db.func.lower(User.email) == email).first()
+        if user:
+            token = serializer.dumps(user.email, salt='reset-senha')
+            link = url_for('resetar_senha', token=token, _external=True)
+            enviar_email(user.email, 'Redefinição de Senha — SENAI Patrimônio', corpo_reset_senha(user, link))
+        # Sempre mostra a mesma mensagem por segurança
+        flash('Se o e-mail estiver cadastrado, você receberá as instruções em breve.', 'info')
+        return redirect(url_for('login'))
+    return render_template('esqueci_senha.html')
+
+@app.route('/resetar-senha/<token>', methods=['GET', 'POST'])
+def resetar_senha(token):
+    try:
+        email = serializer.loads(token, salt='reset-senha', max_age=3600)
+    except (SignatureExpired, BadSignature):
+        flash('Link inválido ou expirado. Solicite um novo.', 'danger')
+        return redirect(url_for('esqueci_senha'))
+    
+    user = User.query.filter_by(email=email).first_or_404()
+    
+    if request.method == 'POST':
+        nova = request.form.get('password')
+        confirma = request.form.get('confirm_password')
+        if nova != confirma:
+            flash('As senhas não coincidem.', 'danger')
+        elif len(nova) < 6:
+            flash('A senha deve ter pelo menos 6 caracteres.', 'danger')
+        else:
+            user.set_password(nova)
+            db.session.commit()
+            flash('Senha alterada com sucesso! Faça login.', 'success')
+            return redirect(url_for('login'))
+    return render_template('resetar_senha.html', token=token)
+
+# --- Admin: Enviar link de reset para qualquer usuário ---
+@app.route('/admin/resetar-senha/<int:user_id>')
+@login_required
+def admin_resetar_senha(user_id):
+    if current_user.role not in ['admin', 'coordenador']:
+        return redirect(url_for('index'))
+    user = User.query.filter_by(id=user_id, escola_id=current_user.escola_id).first_or_404()
+    token = serializer.dumps(user.email, salt='reset-senha')
+    link = url_for('resetar_senha', token=token, _external=True)
+    enviar_email(user.email, 'Redefinição de Senha — SENAI Patrimônio', corpo_reset_senha(user, link))
+    flash(f'Link de redefinição enviado para {user.email}!', 'success')
+    return redirect(url_for('admin_responsaveis'))
 
 @app.route('/logout')
 @login_required
@@ -513,7 +624,7 @@ def admin_validar_inventario(inv_id):
     flash('Inventário validado e arquivado!', 'success')
     return redirect(url_for('admin_dashboard'))
 
-# CRUD Professores (Com Notificação)
+# CRUD Professores (Com E-mail Real)
 @app.route('/admin/responsaveis', methods=['GET', 'POST'])
 @login_required
 def admin_responsaveis():
@@ -530,20 +641,23 @@ def admin_responsaveis():
         )
         novo_u.set_password(senha_pura)
         
-        # Enviar Notificação
-        mock_enviar_email(
-            novo_u.email, 
-            f"Seu Acesso ao Sistema SENAI - {current_user.escola.nome}",
-            f"Olá {novo_u.nome}, seu acesso foi criado.\nUsuário: {novo_u.username}\nSenha: {senha_pura}\nUnidade: {current_user.escola.nome}"
-        )
-        
         sala_ids = request.form.getlist('sala_ids')
         for sid in sala_ids:
             s = Sala.query.filter_by(id=sid, escola_id=e_id).first()
             if s: novo_u.salas.append(s)
+        
         db.session.add(novo_u)
         db.session.commit()
-        flash('Responsável cadastrado com sucesso!', 'success')
+        
+        # Enviar e-mail de boas-vindas com credenciais e ambientes
+        base_url = request.host_url.rstrip('/')
+        enviar_email(
+            novo_u.email,
+            f'Seu acesso ao SENAI Patrimônio — {current_user.escola.nome}',
+            corpo_boas_vindas(novo_u, senha_pura, current_user.escola.nome, base_url)
+        )
+        
+        flash(f'Conta criada e e-mail enviado para {novo_u.email}!', 'success')
         return redirect(url_for('admin_responsaveis'))
     
     responsaveis = User.query.filter(User.role.in_(['professor', 'coordenador']), User.escola_id == e_id).all()
